@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Especificación – La Universidad en el Campo</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color: #0F172A;
+    line-height: 1.55;
+    font-size: 11pt;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  h1 {
+    color: #0033A0;
+    font-size: 26pt;
+    border-bottom: 4px solid #FFD100;
+    padding-bottom: 12px;
+    margin-top: 0;
+    page-break-after: avoid;
+  }
+  h2 {
+    color: #0033A0;
+    font-size: 17pt;
+    margin-top: 32px;
+    border-left: 6px solid #FFD100;
+    padding-left: 12px;
+    page-break-after: avoid;
+  }
+  h3 {
+    color: #1E4FBF;
+    font-size: 13pt;
+    margin-top: 22px;
+    page-break-after: avoid;
+  }
+  h4 { color: #1E4FBF; font-size: 11.5pt; margin-top: 16px; }
+  p, li { font-size: 10.5pt; text-align: justify; }
+  code {
+    background: #F1F5F9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt;
+    color: #0033A0;
+  }
+  pre {
+    background: #0B1220;
+    color: #F1F5F9;
+    padding: 14px 18px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 9pt;
+    line-height: 1.5;
+    page-break-inside: avoid;
+    border-left: 4px solid #FFD100;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #0033A0;
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #E2E8F0;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #F8FAFC; }
+  .portada {
+    text-align: center;
+    padding: 60px 20px;
+    page-break-after: always;
+    border: 3px solid #0033A0;
+    border-radius: 12px;
+    margin-bottom: 40px;
+  }
+  .portada .logo {
+    font-size: 60pt;
+    margin-bottom: 10px;
+  }
+  .portada h1 {
+    border: none;
+    font-size: 30pt;
+    margin: 20px 0 10px;
+    padding: 0;
+  }
+  .portada .sub {
+    font-size: 14pt;
+    color: #64748B;
+    margin-bottom: 30px;
+  }
+  .portada .meta {
+    font-size: 11pt;
+    color: #0F172A;
+    line-height: 2;
+    margin-top: 40px;
+  }
+  .portada .barra {
+    width: 120px;
+    height: 6px;
+    background: #FFD100;
+    margin: 20px auto;
+    border-radius: 3px;
+  }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  .badge {
+    display: inline-block;
+    background: #FFD100;
+    color: #0033A0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 8.5pt;
+    font-weight: 700;
+  }
+  .nota {
+    background: #FFF9DB;
+    border-left: 4px solid #FFD100;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 10pt;
+    margin: 12px 0;
+  }
+  .indice ol { list-style: none; padding-left: 0; counter-reset: item; }
+  .indice ol li { counter-increment: item; margin-bottom: 6px; font-size: 10.5pt; }
+  .indice ol li::before {
+    content: counter(item) ". ";
+    font-weight: 700;
+    color: #0033A0;
+    margin-right: 6px;
+  }
+  hr { border: none; border-top: 1px solid #E2E8F0; margin: 30px 0; }
+  .page-break { page-break-before: always; }
+  footer {
+    text-align: center;
+    font-size: 9pt;
+    color: #64748B;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 2px solid #FFD100;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= PORTADA ================= -->
+<div class="portada">
+  <div class="logo">🌾</div>
+  <h1>La Universidad en el Campo</h1>
+  <div class="barra"></div>
+  <div class="sub">Sistema de Seguimiento, Monitoreo y Gestión<br>Comunidades de Cambio · CEPE</div>
+  <div class="meta">
+    <strong>Documento:</strong> Especificación Funcional y Técnica<br>
+    <strong>Versión:</strong> 1.0<br>
+    <strong>Fecha:</strong> Septiembre 2026<br>
+    <strong>Organización:</strong> Comité de Cafeteros de Caldas<br>
+    <strong>Programa:</strong> Colombia Evidencia Potencial en Educación – CEPE<br>
+    <strong>Responsable:</strong> Sonia Isabel Villegas Duque
+  </div>
+</div>
+
+<!-- ================= ÍNDICE ================= -->
+<h1>📑 Tabla de contenido</h1>
+<div class="indice">
+<ol>
+  <li>Resumen ejecutivo</li>
+  <li>Contexto y justificación</li>
+  <li>Objetivos del aplicativo</li>
+  <li>Alcance</li>
+  <li>Usuarios y roles</li>
+  <li>Arquitectura general</li>
+  <li>Modelo de datos</li>
+  <li>Módulos funcionales</li>
+  <li>Sistema de alertas y semáforos</li>
+  <li>Diseño visual y experiencia de usuario</li>
+  <li>Estructura del backend (GAS + clasp + Drive)</li>
+  <li>Estructura del frontend</li>
+  <li>Integración frontend ↔ backend</li>
+  <li>Seguridad y control de acceso</li>
+  <li>Exportación de reportes</li>
+  <li>Despliegue y publicación</li>
+  <li>Plan de trabajo por fases</li>
+  <li>Cronograma estimado</li>
+  <li>Riesgos y mitigaciones</li>
+  <li>Mantenimiento y evolución</li>
+  <li>Anexos</li>
+</ol>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ================= 1 ================= -->
+<h1>1. Resumen ejecutivo</h1>
+<p>El aplicativo web <strong>"La Universidad en el Campo"</strong> es una herramienta digital de seguimiento, monitoreo y gestión creada para el equipo CEPE y el Comité de Cafeteros de Caldas. Su propósito es <strong>centralizar, visualizar y administrar</strong> toda la información de la iniciativa: objetivos, productos, actividades, indicadores MEL, beneficiarios, finanzas, talento humano y alertas, con una interfaz visualmente atractiva, dinámica e interactiva.</p>
+<p>El sistema funciona como <strong>tablero público de consulta</strong> (sin login) y como <strong>panel interno de gestión</strong> (protegido por contraseña simple) para que el equipo CEPE pueda cargar y actualizar información.</p>
+<h3>Arquitectura</h3>
+<ul>
+  <li><strong>Frontend:</strong> HTML5 + CSS3 + JavaScript (migrable a React + Vite + TypeScript) alojado en <strong>GitHub Pages</strong>.</li>
+  <li><strong>Backend:</strong> <strong>Google Apps Script</strong> (GAS) desarrollado con <strong><code>clasp</code></strong>, almacenado en la carpeta institucional de Google Drive.</li>
+  <li><strong>Base de datos:</strong> Google Sheets (gestionado desde Apps Script).</li>
+  <li><strong>Comunicación:</strong> Web App de Apps Script publicada como API REST → consumida vía <code>fetch</code> desde el frontend.</li>
+</ul>
+<div class="nota">📁 Carpeta institucional de Drive: <code>https://drive.google.com/drive/folders/1rgOSvr9fmi0sSieOndXpge9aY4vszU3I</code></div>
+
+<!-- ================= 2 ================= -->
+<h1>2. Contexto y justificación</h1>
+<p>La iniciativa <strong>La Universidad en el Campo</strong> es liderada por el Comité de Cafeteros de Caldas bajo el enfoque de <strong>articulación educación media – posmedia</strong>, <strong>liderazgo directivo</strong> y <strong>fortalecimiento de la triada Familia–Escuela–Estudiante</strong>, en el marco del programa <strong>Comunidades de Cambio – CEPE</strong>.</p>
+<p>Actualmente la información vive dispersa en múltiples archivos: Excel de cronograma, informes PDF, presentaciones, matrices financieras, listados de beneficiarios y matrices MEL. Esto dificulta:</p>
+<ul>
+  <li>Ver el avance consolidado en tiempo real.</li>
+  <li>Detectar retrasos y alertas tempranas.</li>
+  <li>Comparar lo planeado vs. lo ejecutado.</li>
+  <li>Reportar a Fundación PLAN y a la Secretaría de Educación de Manizales.</li>
+  <li>Tomar decisiones oportunas.</li>
+</ul>
+<p><strong>El aplicativo resuelve esto</strong> con un sistema único, visual y accesible, que consolida toda la información en un solo lugar, muestra semáforos y alertas automáticas, permite actualizar avances desde la app, genera reportes exportables (PDF, Excel), es público para consulta y privado para edición.</p>
+
+<!-- ================= 3 ================= -->
+<h1>3. Objetivos del aplicativo</h1>
+<h3>Objetivo general</h3>
+<p>Diseñar y desarrollar un aplicativo web que permita <strong>visualizar, gestionar y monitorear</strong> el avance técnico, financiero y territorial de la iniciativa "La Universidad en el Campo", mediante un dashboard interactivo y un panel de administración integrado con Google Sheets.</p>
+<h3>Objetivos específicos</h3>
+<ol>
+  <li><strong>Centralizar</strong> la información del proyecto (objetivos, productos, actividades, indicadores, beneficiarios, finanzas, talento humano).</li>
+  <li><strong>Visualizar</strong> el avance por objetivo, producto y actividad con semáforos y KPIs dinámicos.</li>
+  <li><strong>Generar alertas automáticas</strong> por retrasos en productos e indicadores MEL sin medir.</li>
+  <li><strong>Permitir la carga y edición manual</strong> de la información desde la app.</li>
+  <li><strong>Exportar reportes</strong> en PDF y Excel para rendición de cuentas.</li>
+  <li><strong>Facilitar la toma de decisiones</strong> con datos consolidados y actualizados.</li>
+  <li><strong>Ser accesible públicamente</strong> para consulta y auditable en su versión de solo lectura.</li>
+</ol>
+
+<!-- ================= 4 ================= -->
+<h1>4. Alcance</h1>
+<h3>Incluye</h3>
+<ul>
+  <li>Dashboard general con KPIs, semáforos y alertas.</li>
+  <li>Módulo de productos con filtros, búsqueda y edición.</li>
+  <li>Cronograma tipo Gantt mensual (marzo – noviembre).</li>
+  <li>Módulo de indicadores MEL con estado de medición.</li>
+  <li>Módulo de beneficiarios (estudiantes, docentes, directivos).</li>
+  <li>Módulo financiero (presupuesto vs. ejecución, por objetivo y fuente).</li>
+  <li>Módulo de instituciones educativas (12 IEs rurales de Manizales).</li>
+  <li>Módulo de talento humano.</li>
+  <li>Módulo de alertas centralizadas.</li>
+  <li>Panel de administración con formularios de carga.</li>
+  <li>Exportación a PDF y Excel.</li>
+  <li>Modo claro / oscuro.</li>
+  <li>Identidad visual CEPE.</li>
+</ul>
+<h3>No incluye (por ahora)</h3>
+<ul>
+  <li>Login con usuarios y roles (se usará contraseña simple en admin).</li>
+  <li>Notificaciones push o por correo automáticas.</li>
+  <li>App móvil nativa.</li>
+  <li>Integración directa con sistemas externos (SED, universidades).</li>
+  <li>Firma electrónica o flujos de aprobación.</li>
+</ul>
+
+<!-- ================= 5 ================= -->
+<h1>5. Usuarios y roles</h1>
+<table>
+  <thead><tr><th>Rol</th><th>Descripción</th><th>Permisos</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Visitante público</strong></td><td>Cualquier persona con el enlace</td><td>Solo lectura: dashboard, productos, indicadores, beneficiarios, finanzas, alertas</td></tr>
+    <tr><td><strong>Equipo CEPE</strong></td><td>Coordinación general, pedagógica, tecnología</td><td>Lectura + carga y edición de datos desde panel admin</td></tr>
+    <tr><td><strong>Comité de Cafeteros</strong></td><td>Coordinadores y asesores pedagógicos</td><td>Lectura + carga y edición de datos desde panel admin</td></tr>
+    <tr><td><strong>Fundación PLAN / SED</strong></td><td>Unidad de implementación / aliados</td><td>Solo lectura (para auditoría y seguimiento)</td></tr>
+  </tbody>
+</table>
+<div class="nota">No se implementará autenticación con usuarios individuales. El panel admin estará protegido por una <strong>contraseña única</strong> definida como variable de entorno.</div>
+
+<div class="page-break"></div>
+
+<!-- ================= 6 ================= -->
+<h1>6. Arquitectura general</h1>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     USUARIO (navegador)                     │
+│                                                             │
+│    ┌────────────────────────────────────────────────────┐   │
+│    │         FRONTEND (GitHub Pages)                    │   │
+│    │                                                    │   │
+│    │  HTML5 + CSS3 + JavaScript (ES6+)                  │   │
+│    │  (migrable a React + Vite + TS + Tailwind)         │   │
+│    │                                                    │   │
+│    │  • Dashboard          • Beneficiarios              │   │
+│    │  • Productos          • Finanzas                   │   │
+│    │  • Cronograma         • Instituciones              │   │
+│    │  • Indicadores MEL    • Alertas                    │   │
+│    │  • Panel Admin        • Exportación PDF/Excel      │   │
+│    └───────────────────┬────────────────────────────────┘   │
+│                        │ fetch() HTTPS / JSON               │
+│                        ▼                                    │
+│    ┌────────────────────────────────────────────────────┐   │
+│    │    BACKEND (Google Apps Script + clasp)            │   │
+│    │    Google Drive: 1rgOSvr9fmi0sSieOndXpge9aY4vszU3I │   │
+│    │                                                    │   │
+│    │  • doGet(e)   → lectura                            │   │
+│    │  • doPost(e)  → escritura                          │   │
+│    │  • Servicios: Objetivos, Productos, Actividades,   │   │
+│    │    MEL, Beneficiarios, Finanzas, Talento, Alertas  │   │
+│    │  • Validaciones y reglas de negocio                │   │
+│    │  • Cálculo de semáforos y alertas                  │   │
+│    └───────────────────┬────────────────────────────────┘   │
+│                        ▼                                    │
+│    ┌────────────────────────────────────────────────────┐   │
+│    │         GOOGLE SHEETS (Base de datos)              │   │
+│    │  OBJETIVOS   PRODUCTOS   ACTIVIDADES               │   │
+│    │  INDICADORES_MEL   BENEFICIARIOS   INSTITUCIONES   │   │
+│    │  FINANZAS   TALENTO_HUMANO   ALERTAS               │   │
+│    └────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+
+<h3>Flujo de datos</h3>
+<ol>
+  <li><strong>Lectura (público):</strong> Frontend → <code>fetch(GAS_URL?action=getAll)</code> → Apps Script lee Sheets → devuelve JSON → Frontend renderiza.</li>
+  <li><strong>Escritura (admin):</strong> Admin ingresa contraseña → frontend envía <code>POST</code> con token → Apps Script valida → escribe en Sheets → responde OK.</li>
+  <li><strong>Alertas:</strong> Apps Script recalcula alertas cada vez que se leen o escriben datos, aplicando reglas de negocio.</li>
+</ol>
+
+<!-- ================= 7 ================= -->
+<h1>7. Modelo de datos</h1>
+<p>Se usarán <strong>9 hojas</strong> en Google Sheets, cada una representando una entidad.</p>
+
+<h3>7.1 OBJETIVOS</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td><td>OBJ1, OBJ2, OBJ3</td></tr>
+    <tr><td>nombre</td><td>string</td><td>Liderazgo / Articulación / Formación</td></tr>
+    <tr><td>descripcion</td><td>text</td><td>Descripción completa</td></tr>
+    <tr><td>peso</td><td>number</td><td>Peso porcentual dentro del proyecto</td></tr>
+    <tr><td>avance_actual</td><td>number</td><td>% de avance actual</td></tr>
+    <tr><td>estado</td><td>enum</td><td>en_tiempo, en_riesgo, retrasado, no_iniciado</td></tr>
+    <tr><td>color</td><td>string</td><td>🟢 / 🟡 / 🔴 / ⚪</td></tr>
+    <tr><td>orden</td><td>number</td><td>Orden de aparición</td></tr>
+  </tbody>
+</table>
+
+<h3>7.2 PRODUCTOS</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td><td>P1.1, P1.2…</td></tr>
+    <tr><td>objetivo_id</td><td>string</td><td>FK a OBJETIVOS</td></tr>
+    <tr><td>nombre</td><td>string</td><td>Nombre del producto</td></tr>
+    <tr><td>indicador</td><td>string</td><td>Indicador asociado</td></tr>
+    <tr><td>peso</td><td>number</td><td>% dentro del objetivo</td></tr>
+    <tr><td>mes_inicio</td><td>number</td><td>Mes 1–9</td></tr>
+    <tr><td>mes_fin</td><td>number</td><td>Mes 1–9</td></tr>
+    <tr><td>pct_esperado</td><td>number</td><td>% esperado a la fecha</td></tr>
+    <tr><td>pct_real</td><td>number</td><td>% real</td></tr>
+    <tr><td>valor_presupuestado</td><td>number</td><td>COP</td></tr>
+    <tr><td>valor_ejecutado</td><td>number</td><td>COP</td></tr>
+    <tr><td>estado</td><td>enum</td><td>completado, en_tiempo, en_riesgo, retrasado, no_iniciado</td></tr>
+    <tr><td>observaciones</td><td>text</td><td>Notas</td></tr>
+    <tr><td>fuente_verificacion</td><td>text</td><td>Evidencia</td></tr>
+    <tr><td>responsable</td><td>string</td><td>Comité de Cafeteros / etc.</td></tr>
+  </tbody>
+</table>
+
+<h3>7.3 ACTIVIDADES</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td></tr>
+    <tr><td>producto_id</td><td>string</td></tr>
+    <tr><td>nombre</td><td>string</td></tr>
+    <tr><td>mes</td><td>number (1–9)</td></tr>
+    <tr><td>responsable</td><td>string</td></tr>
+    <tr><td>completada</td><td>boolean</td></tr>
+    <tr><td>fecha_realizacion</td><td>date</td></tr>
+    <tr><td>evidencia</td><td>text</td></tr>
+    <tr><td>observaciones</td><td>text</td></tr>
+  </tbody>
+</table>
+
+<h3>7.4 INDICADORES_MEL</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td></tr>
+    <tr><td>nombre</td><td>string</td></tr>
+    <tr><td>periodicidad</td><td>enum (Mensual, Bimensual, Trimestral, Semestral, Anual)</td></tr>
+    <tr><td>meta</td><td>number</td></tr>
+    <tr><td>alcanzado</td><td>number</td></tr>
+    <tr><td>pct_cumplimiento</td><td>number</td></tr>
+    <tr><td>corresponde_medicion</td><td>boolean</td></tr>
+    <tr><td>se_midio</td><td>enum (Sí, No, Parcial)</td></tr>
+    <tr><td>observaciones</td><td>text</td></tr>
+  </tbody>
+</table>
+
+<h3>7.5 BENEFICIARIOS</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td></tr>
+    <tr><td>tipo</td><td>enum (estudiante, docente, directivo, acudiente)</td></tr>
+    <tr><td>genero</td><td>enum (M, F, Otro)</td></tr>
+    <tr><td>institucion</td><td>string</td></tr>
+    <tr><td>universidad</td><td>string</td></tr>
+    <tr><td>programa</td><td>string</td></tr>
+    <tr><td>estado</td><td>enum (activo, desertor, egresado)</td></tr>
+    <tr><td>año</td><td>number</td></tr>
+  </tbody>
+</table>
+
+<h3>7.6 INSTITUCIONES</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td></tr>
+    <tr><td>nombre</td><td>string</td></tr>
+    <tr><td>sede</td><td>string</td></tr>
+    <tr><td>estudiantes_2026</td><td>number</td></tr>
+    <tr><td>estudiantes_2027</td><td>number</td></tr>
+    <tr><td>egresados_2026</td><td>number</td></tr>
+    <tr><td>egresados_2027</td><td>number</td></tr>
+  </tbody>
+</table>
+
+<h3>7.7 FINANZAS</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td></tr>
+    <tr><td>objetivo_id</td><td>string</td></tr>
+    <tr><td>rubro</td><td>string</td></tr>
+    <tr><td>presupuestado</td><td>number</td></tr>
+    <tr><td>ejecutado</td><td>number</td></tr>
+    <tr><td>pct_ejecucion</td><td>number</td></tr>
+    <tr><td>fuente</td><td>enum (PLAN, SED, Aliados, Especie)</td></tr>
+    <tr><td>observaciones</td><td>text</td></tr>
+  </tbody>
+</table>
+
+<h3>7.8 TALENTO_HUMANO</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td></tr>
+    <tr><td>rol</td><td>string</td></tr>
+    <tr><td>valor_mes</td><td>number</td></tr>
+    <tr><td>meses</td><td>number</td></tr>
+    <tr><td>dedicacion</td><td>number (%)</td></tr>
+    <tr><td>pct_ejecutado</td><td>number</td></tr>
+    <tr><td>valor_ejecutado</td><td>number</td></tr>
+    <tr><td>observaciones</td><td>text</td></tr>
+  </tbody>
+</table>
+
+<h3>7.9 ALERTAS</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>string</td></tr>
+    <tr><td>tipo</td><td>enum (retraso_producto, indicador_sin_medir, desviacion_financiera, desercion, otro)</td></tr>
+    <tr><td>severidad</td><td>enum (alta, media, baja)</td></tr>
+    <tr><td>descripcion</td><td>text</td></tr>
+    <tr><td>producto_id</td><td>string</td></tr>
+    <tr><td>indicador_id</td><td>string</td></tr>
+    <tr><td>fecha</td><td>date</td></tr>
+    <tr><td>estado</td><td>enum (activa, resuelta)</td></tr>
+    <tr><td>accion</td><td>text</td></tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ================= 8 ================= -->
+<h1>8. Módulos funcionales</h1>
+
+<h3>8.1 Dashboard general</h3>
+<ul>
+  <li>4 KPIs: avance técnico, financiero, territorial, estado general.</li>
+  <li>Panel de avance por objetivo (barras).</li>
+  <li>Semáforo de productos (conteo por color).</li>
+  <li>Panel de alertas activas.</li>
+  <li>Tarjeta de beneficiarios.</li>
+  <li>Tarjeta de ejecución presupuestal.</li>
+  <li>Gráfico de evolución mensual (abril → julio).</li>
+</ul>
+
+<h3>8.2 Productos</h3>
+<ul>
+  <li>Tabla con: producto, objetivo, indicador, peso, % esperado, % real, valor, estado, responsable.</li>
+  <li>Filtros: objetivo, estado, responsable, mes.</li>
+  <li>Búsqueda por texto.</li>
+  <li>Ordenamiento por columnas.</li>
+  <li>Edición inline (admin).</li>
+  <li>Exportar a Excel.</li>
+</ul>
+
+<h3>8.3 Cronograma</h3>
+<ul>
+  <li>Vista tipo Gantt mensual (mes 1 a 9).</li>
+  <li>Actividades agrupadas por producto.</li>
+  <li>Estado visual (completada / pendiente / retrasada).</li>
+  <li>Click para ver detalle.</li>
+</ul>
+
+<h3>8.4 Indicadores MEL</h3>
+<ul>
+  <li>Tabla con: indicador, periodicidad, meta, alcanzado, % cumplimiento, estado de medición.</li>
+  <li>Alertas destacadas para indicadores sin medir.</li>
+  <li>Filtros por periodicidad y estado.</li>
+</ul>
+
+<h3>8.5 Beneficiarios</h3>
+<ul>
+  <li>Totales: estudiantes, docentes, directivos, acudientes.</li>
+  <li>Distribución por universidad (Caldas, Manizales, Católica, Autónoma).</li>
+  <li>Distribución por institución educativa.</li>
+  <li>Distribución por género.</li>
+  <li>Permanencia vs. deserción.</li>
+  <li>Gráficos circulares y de barras.</li>
+</ul>
+
+<h3>8.6 Finanzas</h3>
+<ul>
+  <li>Presupuesto total vs. ejecutado.</li>
+  <li>Desglose por objetivo.</li>
+  <li>Desglose por fuente (PLAN, SED, aliados, especie).</li>
+  <li>Tabla de talento humano.</li>
+  <li>Gráficos de ejecución.</li>
+</ul>
+
+<h3>8.7 Instituciones educativas</h3>
+<ul>
+  <li>Tabla con las 12 IEs: sede, estudiantes 2026/2027, egresados 2026/2027.</li>
+  <li>Estado de cada IE en el proyecto.</li>
+  <li>Mapa o listado visual.</li>
+</ul>
+
+<h3>8.8 Alertas</h3>
+<ul>
+  <li>Panel centralizado con filtros por tipo, severidad, estado.</li>
+  <li>Ordenadas por severidad y fecha.</li>
+  <li>Acción correctiva editable.</li>
+  <li>Historial de alertas resueltas.</li>
+</ul>
+
+<h3>8.9 Panel de administración</h3>
+<ul>
+  <li>Protegido con contraseña.</li>
+  <li>Formularios para crear/editar objetivos, productos, actividades, MEL, beneficiarios y finanzas.</li>
+  <li>Botón "Sincronizar con Google Sheets".</li>
+  <li>Log de cambios.</li>
+</ul>
+
+<h3>8.10 Exportación</h3>
+<ul>
+  <li>Botón "Exportar" en cada módulo.</li>
+  <li>Formatos: PDF y Excel (.xlsx).</li>
+  <li>Plantillas con identidad CEPE.</li>
+  <li>Incluye fecha de generación y corte.</li>
+</ul>
+
+<!-- ================= 9 ================= -->
+<h1>9. Sistema de alertas y semáforos</h1>
+
+<h3>Reglas de semáforo (por producto)</h3>
+<table>
+  <thead><tr><th>Color</th><th>Condición</th><th>Significado</th></tr></thead>
+  <tbody>
+    <tr><td>🟢 Verde</td><td><code>pct_real &gt;= pct_esperado</code></td><td>En tiempo</td></tr>
+    <tr><td>🟡 Amarillo</td><td><code>pct_real &gt;= pct_esperado * 0.85</code> y <code>&lt; pct_esperado</code></td><td>En riesgo moderado</td></tr>
+    <tr><td>🔴 Rojo</td><td><code>pct_real &lt; pct_esperado * 0.5</code> o fecha vencida sin completar</td><td>Retraso crítico</td></tr>
+    <tr><td>⚪ Gris</td><td><code>pct_real = 0</code> y aún no inicia</td><td>No iniciado</td></tr>
+    <tr><td>🔵 Azul</td><td><code>pct_real = 100</code></td><td>Completado</td></tr>
+  </tbody>
+</table>
+
+<h3>Reglas de alertas automáticas</h3>
+<table>
+  <thead><tr><th>Tipo</th><th>Disparador</th><th>Severidad</th></tr></thead>
+  <tbody>
+    <tr><td><code>retraso_producto</code></td><td>Producto con <code>pct_real &lt; pct_esperado * 0.5</code> y mes actual &gt; mes_inicio</td><td>Alta</td></tr>
+    <tr><td><code>retraso_producto</code></td><td>Producto con <code>pct_real &lt; pct_esperado * 0.85</code></td><td>Media</td></tr>
+    <tr><td><code>indicador_sin_medir</code></td><td><code>corresponde_medicion = Sí</code> y <code>se_midio = No</code></td><td>Alta</td></tr>
+    <tr><td><code>indicador_sin_medir</code></td><td><code>se_midio = Parcial</code></td><td>Media</td></tr>
+    <tr><td><code>desviacion_financiera</code></td><td><code>pct_ejecucion_financiero - pct_avance_tecnico &gt; 20</code> pp</td><td>Media</td></tr>
+    <tr><td><code>desercion</code></td><td>Tasa de deserción &gt; 5 %</td><td>Alta</td></tr>
+    <tr><td><code>producto_proximo_vencer</code></td><td>Mes actual == mes_fin y <code>pct_real &lt; 100</code></td><td>Media</td></tr>
+  </tbody>
+</table>
+
+<h3>Prioridades del proyecto</h3>
+<p>Según lo definido por el equipo, las alertas <strong>prioritarias</strong> son:</p>
+<ol>
+  <li>🔴 <strong>Retraso de productos</strong> (alta prioridad).</li>
+  <li>📊 <strong>Indicadores MEL sin medir</strong> (alta prioridad).</li>
+</ol>
+<p>Las demás se muestran como complementarias.</p>
+
+<div class="page-break"></div>
+
+<!-- ================= 10 ================= -->
+<h1>10. Diseño visual y experiencia de usuario</h1>
+
+<h3>10.1 Identidad visual</h3>
+<ul>
+  <li><strong>Colores CEPE:</strong> Amarillo <code>#FFD100</code>, Azul <code>#0033A0</code>, Azul claro <code>#1E4FBF</code>.</li>
+  <li><strong>Colores semáforo:</strong> Verde <code>#22C55E</code>, Amarillo <code>#EAB308</code>, Rojo <code>#EF4444</code>, Gris <code>#94A3B8</code>.</li>
+  <li><strong>Tipografía:</strong> Inter o Poppins.</li>
+  <li><strong>Estilo:</strong> tarjetas con sombras suaves, bordes redondeados, micro-animaciones, transiciones fluidas.</li>
+</ul>
+
+<h3>10.2 Principios de UX</h3>
+<ul>
+  <li><strong>Claridad:</strong> cada dato tiene contexto y tooltip.</li>
+  <li><strong>Rapidez:</strong> carga &lt; 3 s; filtros instantáneos.</li>
+  <li><strong>Interactividad:</strong> hover, click, transiciones.</li>
+  <li><strong>Accesibilidad:</strong> contraste AA, navegación por teclado, texto escalable.</li>
+  <li><strong>Responsive:</strong> desktop, tablet, móvil.</li>
+</ul>
+
+<h3>10.3 Componentes clave</h3>
+<ul>
+  <li>Tarjetas KPI con barras animadas.</li>
+  <li>Semáforos con dots de color.</li>
+  <li>Gráficos de barras, líneas y dona.</li>
+  <li>Tablas con filtros y búsqueda.</li>
+  <li>Modales para detalle.</li>
+  <li>Toggle de modo oscuro.</li>
+  <li>Notificaciones tipo toast.</li>
+</ul>
+
+<!-- ================= 11 ================= -->
+<h1>11. Estructura del backend (GAS + clasp + Drive)</h1>
+
+<h3>11.1 Decisión arquitectónica</h3>
+<p>Todo el backend se desarrollará en <strong>Google Apps Script (GAS)</strong> y se gestionará con <strong><code>clasp</code></strong> (Command Line Apps Script Projects), lo que permite: versionar el código en Git, editar localmente con VS Code, desplegar con un comando, trabajar en equipo con ramas y mantener el código junto a la documentación en la carpeta institucional de Drive.</p>
+<div class="nota">📁 <code>https://drive.google.com/drive/folders/1rgOSvr9fmi0sSieOndXpge9aY4vszU3I</code></div>
+<p>En esta carpeta vivirán: el proyecto Apps Script vinculado al Sheet, el Sheet con las 9 hojas, la documentación técnica, los scripts de despliegue <code>clasp</code> y los respaldos periódicos.</p>
+
+<h3>11.2 Estructura de carpetas del backend</h3>
+<pre><code>backend/
+├── .clasp.json              # Configuración del proyecto clasp
+├── .claspignore
+├── appsscript.json          # Manifiesto de Apps Script
+├── package.json
+├── README.md
+├── src/
+│   ├── main.gs              # doGet, doPost, router
+│   ├── config.gs            # Constantes, IDs de Sheet, tokens
+│   ├── utils.gs             # Helpers (respuestas JSON, validaciones)
+│   ├── services/
+│   │   ├── objetivos.gs
+│   │   ├── productos.gs
+│   │   ├── actividades.gs
+│   │   ├── mel.gs
+│   │   ├── beneficiarios.gs
+│   │   ├── instituciones.gs
+│   │   ├── finanzas.gs
+│   │   ├── talento.gs
+│   │   └── alertas.gs
+│   ├── rules/
+│   │   ├── semaforos.gs
+│   │   └── alertas.gs
+│   └── sheets.gs
+├── tests/
+│   └── test_services.gs
+└── docs/
+    └── API.md</code></pre>
+
+<h3>11.3 Endpoints de la Web App</h3>
+<table>
+  <thead><tr><th>Método</th><th>Acción</th><th>Descripción</th></tr></thead>
+  <tbody>
+    <tr><td>GET</td><td><code>?action=getAll</code></td><td>Devuelve todos los datos consolidados</td></tr>
+    <tr><td>GET</td><td><code>?action=getObjetivos</code></td><td>Solo objetivos</td></tr>
+    <tr><td>GET</td><td><code>?action=getProductos</code></td><td>Solo productos</td></tr>
+    <tr><td>GET</td><td><code>?action=getActividades</code></td><td>Solo actividades</td></tr>
+    <tr><td>GET</td><td><code>?action=getMEL</code></td><td>Solo indicadores MEL</td></tr>
+    <tr><td>GET</td><td><code>?action=getBeneficiarios</code></td><td>Solo beneficiarios</td></tr>
+    <tr><td>GET</td><td><code>?action=getFinanzas</code></td><td>Solo finanzas</td></tr>
+    <tr><td>GET</td><td><code>?action=getAlertas</code></td><td>Solo alertas</td></tr>
+    <tr><td>GET</td><td><code>?action=getDashboard</code></td><td>KPIs consolidados</td></tr>
+    <tr><td>POST</td><td><code>action=updateProducto</code></td><td>Actualiza un producto</td></tr>
+    <tr><td>POST</td><td><code>action=updateActividad</code></td><td>Actualiza una actividad</td></tr>
+    <tr><td>POST</td><td><code>action=updateMEL</code></td><td>Actualiza indicador MEL</td></tr>
+    <tr><td>POST</td><td><code>action=createAlerta</code></td><td>Registra alerta</td></tr>
+    <tr><td>POST</td><td><code>action=resolveAlerta</code></td><td>Marca alerta como resuelta</td></tr>
+    <tr><td>POST</td><td><code>action=login</code></td><td>Valida contraseña admin</td></tr>
+  </tbody>
+</table>
+
+<h3>11.4 Configuración de <code>clasp</code></h3>
+<pre><code># Instalación global
+npm install -g @google/clasp
+
+# Login
+clasp login
+
+# Crear proyecto (dentro de la carpeta de Drive)
+cd "ruta/a/la/carpeta/de/Drive/backend"
+clasp create --title "Ucampo Backend" --type sheets
+
+# Clonar un proyecto existente
+clasp clone &lt;SCRIPT_ID&gt;
+
+# Subir cambios
+clasp push
+
+# Desplegar como Web App
+clasp deploy --description "v1.0"</code></pre>
+
+<h3>11.5 Manifiesto <code>appsscript.json</code></h3>
+<pre><code>{
+  "timeZone": "America/Bogota",
+  "dependencies": {},
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "ANYONE_ANONYMOUS"
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/script.external_request"
+  ]
+}</code></pre>
+
+<h3>11.6 Manejo de errores</h3>
+<ul>
+  <li>Todas las respuestas tendrán formato <code>{ ok: true/false, data: ..., error: ... }</code>.</li>
+  <li>Los errores se registran en una hoja <code>LOGS</code> (opcional).</li>
+  <li>Se valida la estructura de los datos antes de escribir.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ================= 12 ================= -->
+<h1>12. Estructura del frontend</h1>
+
+<h3>12.1 Fase 1 (prototipo)</h3>
+<p>Un único <code>index.html</code> con CSS y JS embebidos, funcional y sin dependencias, para validar diseño y flujos.</p>
+
+<h3>12.2 Fase 2 (React)</h3>
+<pre><code>frontend/
+├── public/
+│   └── favicon.ico
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── index.css
+│   ├── api/
+│   │   └── gas.ts             # Cliente fetch al backend
+│   ├── components/
+│   │   ├── Header.tsx
+│   │   ├── Tabs.tsx
+│   │   ├── KPI.tsx
+│   │   ├── Semaforo.tsx
+│   │   ├── Card.tsx
+│   │   ├── AlertItem.tsx
+│   │   ├── Table.tsx
+│   │   └── Chart.tsx
+│   ├── modules/
+│   │   ├── Dashboard.tsx
+│   │   ├── Productos.tsx
+│   │   ├── Cronograma.tsx
+│   │   ├── MEL.tsx
+│   │   ├── Beneficiarios.tsx
+│   │   ├── Finanzas.tsx
+│   │   ├── Instituciones.tsx
+│   │   ├── Alertas.tsx
+│   │   └── Admin.tsx
+│   ├── hooks/
+│   │   ├── useData.ts
+│   │   └── useTheme.ts
+│   ├── types/
+│   │   └── index.ts
+│   └── utils/
+│       ├── format.ts
+│       └── export.ts
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── tailwind.config.js</code></pre>
+
+<h3>12.3 Despliegue en GitHub Pages</h3>
+<ul>
+  <li>Repositorio: <code>ucampo-dashboard</code>.</li>
+  <li>Rama: <code>main</code>.</li>
+  <li>Comando: <code>npm run build</code> → carpeta <code>dist/</code> → GitHub Pages.</li>
+  <li>URL: <code>https://&lt;usuario&gt;.github.io/ucampo-dashboard/</code>.</li>
+</ul>
+
+<!-- ================= 13 ================= -->
+<h1>13. Integración frontend ↔ backend</h1>
+
+<h3>13.1 Configuración</h3>
+<pre><code>const GAS_URL = "https://script.google.com/macros/s/AKfycb.../exec";</code></pre>
+
+<h3>13.2 Ejemplo de lectura</h3>
+<pre><code>async function cargarDashboard() {
+  const res = await fetch(`${GAS_URL}?action=getDashboard`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error);
+  renderDashboard(json.data);
+}</code></pre>
+
+<h3>13.3 Ejemplo de escritura</h3>
+<pre><code>async function actualizarProducto(id, cambios, token) {
+  const res = await fetch(GAS_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "updateProducto", id, cambios, token }),
+  });
+  return await res.json();
+}</code></pre>
+
+<h3>13.4 CORS</h3>
+<p>Apps Script Web App publicada como <code>ANYONE_ANONYMOUS</code> permite CORS desde cualquier origen si se usa <code>ContentService</code> con <code>JSON</code>. Se documentará esta configuración en el README del backend.</p>
+
+<!-- ================= 14 ================= -->
+<h1>14. Seguridad y control de acceso</h1>
+<ul>
+  <li><strong>Frontend público:</strong> sin login, solo lectura.</li>
+  <li><strong>Panel admin:</strong> protegido por contraseña simple almacenada como variable de entorno en Apps Script (<code>PropertiesService</code>).</li>
+  <li><strong>Token temporal:</strong> al validar la contraseña, el backend devuelve un token temporal guardado en <code>CacheService</code> (expira en 30 min).</li>
+  <li><strong>Validación en backend:</strong> cada operación de escritura valida el token.</li>
+  <li><strong>Sin datos sensibles:</strong> no se almacenan datos personales sensibles; solo información agregada del proyecto.</li>
+  <li><strong>Auditoría:</strong> cada escritura registra usuario (rol), fecha y cambios en una hoja <code>LOGS</code>.</li>
+</ul>
+
+<!-- ================= 15 ================= -->
+<h1>15. Exportación de reportes</h1>
+
+<h3>PDF</h3>
+<ul>
+  <li>Generado con <code>jsPDF</code> + <code>html2canvas</code> en el frontend.</li>
+  <li>Plantilla con logo CEPE, título, fecha, corte y contenido del módulo.</li>
+  <li>Botón "Exportar PDF" en cada vista.</li>
+</ul>
+
+<h3>Excel</h3>
+<ul>
+  <li>Generado con <code>SheetJS (xlsx)</code> en el frontend.</li>
+  <li>Cada módulo exporta su tabla con encabezados y formato.</li>
+  <li>Botón "Exportar Excel" en cada vista.</li>
+</ul>
+
+<h3>Reporte consolidado</h3>
+<ul>
+  <li>Botón "Generar reporte general" en el dashboard.</li>
+  <li>PDF con: KPIs, avance por objetivo, productos, alertas, beneficiarios y finanzas.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ================= 16 ================= -->
+<h1>16. Despliegue y publicación</h1>
+
+<h3>16.1 Backend</h3>
+<ol>
+  <li>Crear proyecto con <code>clasp create</code> dentro de la carpeta de Drive.</li>
+  <li>Desarrollar localmente en VS Code.</li>
+  <li><code>clasp push</code> para subir.</li>
+  <li><code>clasp deploy</code> para publicar como Web App.</li>
+  <li>Copiar la URL <code>/exec</code> y usarla en el frontend.</li>
+</ol>
+
+<h3>16.2 Frontend</h3>
+<ol>
+  <li>Repositorio en GitHub: <code>ucampo-dashboard</code>.</li>
+  <li>Configurar GitHub Pages desde <code>Settings → Pages</code>.</li>
+  <li>CI/CD opcional con GitHub Actions: cada push a <code>main</code> compila y publica.</li>
+  <li>URL pública: <code>https://&lt;usuario&gt;.github.io/ucampo-dashboard/</code>.</li>
+</ol>
+
+<h3>16.3 Carpeta de Drive</h3>
+<p>📁 <code>https://drive.google.com/drive/folders/1rgOSvr9fmi0sSieOndXpge9aY4vszU3I</code></p>
+<p>Contendrá:</p>
+<ul>
+  <li><code>backend/</code> — código Apps Script (clasp).</li>
+  <li><code>sheets/</code> — hoja de cálculo backend (9 hojas).</li>
+  <li><code>docs/</code> — esta especificación y manuales.</li>
+  <li><code>backups/</code> — respaldos periódicos del Sheet y del código.</li>
+  <li><code>assets/</code> — logos, plantillas, fuentes.</li>
+</ul>
+
+<!-- ================= 17 ================= -->
+<h1>17. Plan de trabajo por fases</h1>
+
+<h3>Fase 0 – Preparación</h3>
+<ul>
+  <li>Crear carpeta de Drive y subcarpetas.</li>
+  <li>Instalar <code>clasp</code> y autenticar.</li>
+  <li>Crear Sheet backend y ejecutar script de estructura.</li>
+  <li>Crear repositorio GitHub.</li>
+  <li>Configurar GitHub Pages.</li>
+</ul>
+
+<h3>Fase 1 – Prototipo visual</h3>
+<ul>
+  <li>Maquetar dashboard en HTML/CSS/JS.</li>
+  <li>Validar diseño con el equipo.</li>
+  <li>Ajustar identidad visual.</li>
+</ul>
+
+<h3>Fase 2 – Backend Apps Script</h3>
+<ul>
+  <li>Desarrollar servicios (lectura y escritura).</li>
+  <li>Implementar reglas de semáforos y alertas.</li>
+  <li>Publicar Web App.</li>
+  <li>Documentar endpoints.</li>
+</ul>
+
+<h3>Fase 3 – Frontend conectado</h3>
+<ul>
+  <li>Migrar a React + Vite + TS + Tailwind.</li>
+  <li>Conectar fetch al backend.</li>
+  <li>Implementar módulos: Dashboard, Productos, Alertas.</li>
+  <li>Implementar exportación PDF/Excel.</li>
+</ul>
+
+<h3>Fase 4 – Módulos completos</h3>
+<ul>
+  <li>Cronograma, MEL, Beneficiarios, Finanzas, Instituciones, Talento Humano.</li>
+  <li>Panel de administración con contraseña.</li>
+  <li>Formularios de carga y edición.</li>
+</ul>
+
+<h3>Fase 5 – Pruebas y ajustes</h3>
+<ul>
+  <li>Pruebas funcionales con datos reales.</li>
+  <li>Pruebas de rendimiento.</li>
+  <li>Corrección de bugs.</li>
+  <li>Validación con el equipo CEPE.</li>
+</ul>
+
+<h3>Fase 6 – Despliegue y capacitación</h3>
+<ul>
+  <li>Publicación final en GitHub Pages.</li>
+  <li>Manual de usuario (PDF).</li>
+  <li>Capacitación al equipo.</li>
+  <li>Entrega formal.</li>
+</ul>
+
+<h3>Fase 7 – Mantenimiento</h3>
+<ul>
+  <li>Soporte y mejoras continuas.</li>
+  <li>Actualizaciones mensuales.</li>
+  <li>Respaldos automáticos.</li>
+</ul>
+
+<!-- ================= 18 ================= -->
+<h1>18. Cronograma estimado</h1>
+<table>
+  <thead><tr><th>Fase</th><th>Duración</th><th>Entregable</th></tr></thead>
+  <tbody>
+    <tr><td>Fase 0 – Preparación</td><td>1 semana</td><td>Carpeta Drive, Sheet, repo, Pages</td></tr>
+    <tr><td>Fase 1 – Prototipo visual</td><td>1 semana</td><td>Dashboard HTML funcional</td></tr>
+    <tr><td>Fase 2 – Backend GAS</td><td>2 semanas</td><td>Web App publicada + endpoints</td></tr>
+    <tr><td>Fase 3 – Frontend conectado</td><td>2 semanas</td><td>React + datos reales</td></tr>
+    <tr><td>Fase 4 – Módulos completos</td><td>3 semanas</td><td>Todos los módulos activos</td></tr>
+    <tr><td>Fase 5 – Pruebas</td><td>1 semana</td><td>App validada</td></tr>
+    <tr><td>Fase 6 – Despliegue</td><td>1 semana</td><td>App en producción + manual</td></tr>
+    <tr><td>Fase 7 – Mantenimiento</td><td>Continuo</td><td>Mejoras y soporte</td></tr>
+  </tbody>
+</table>
+<p><strong>Total estimado: 10–11 semanas</strong> para la versión completa.</p>
+
+<!-- ================= 19 ================= -->
+<h1>19. Riesgos y mitigaciones</h1>
+<table>
+  <thead><tr><th>Riesgo</th><th>Probabilidad</th><th>Impacto</th><th>Mitigación</th></tr></thead>
+  <tbody>
+    <tr><td>Cambios en el plan de trabajo</td><td>Alta</td><td>Medio</td><td>Modelo de datos flexible; edición desde la app</td></tr>
+    <tr><td>Límite de cuota de Apps Script</td><td>Media</td><td>Medio</td><td>Uso eficiente; caché; solo lectura en horario pico</td></tr>
+    <tr><td>Pérdida de datos</td><td>Baja</td><td>Alto</td><td>Respaldos automáticos en Drive</td></tr>
+    <tr><td>Cambios en Google Sheets</td><td>Baja</td><td>Bajo</td><td>Validaciones y versionado</td></tr>
+    <tr><td>Complejidad de CORS en GAS</td><td>Media</td><td>Medio</td><td>Uso de <code>ContentService</code> y pruebas tempranas</td></tr>
+    <tr><td>Falta de adopción del equipo</td><td>Media</td><td>Medio</td><td>Capacitación + manual + UI intuitiva</td></tr>
+    <tr><td>Datos inconsistentes</td><td>Alta</td><td>Medio</td><td>Validaciones en backend + alertas</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= 20 ================= -->
+<h1>20. Mantenimiento y evolución</h1>
+<ul>
+  <li><strong>Respaldos:</strong> semanales del Sheet y del código (carpeta <code>backups/</code>).</li>
+  <li><strong>Versionado:</strong> cada cambio con <code>clasp push</code> + commit en Git.</li>
+  <li><strong>Monitoreo:</strong> revisión mensual de logs y alertas.</li>
+  <li><strong>Mejoras futuras:</strong>
+    <ul>
+      <li>Login con Google (OAuth).</li>
+      <li>Notificaciones por correo.</li>
+      <li>App móvil PWA.</li>
+      <li>Integración con SED y universidades.</li>
+      <li>IA para predicción de retrasos.</li>
+    </ul>
+  </li>
+</ul>
+
+<!-- ================= 21 ================= -->
+<h1>21. Anexos</h1>
+
+<h3>A. Glosario</h3>
+<ul>
+  <li><strong>CEPE:</strong> Colombia Evidencia Potencial en Educación.</li>
+  <li><strong>MEL:</strong> Monitoreo, Evaluación y Aprendizaje.</li>
+  <li><strong>GAS:</strong> Google Apps Script.</li>
+  <li><strong>clasp:</strong> Command Line Apps Script Projects.</li>
+  <li><strong>SED:</strong> Secretaría de Educación.</li>
+  <li><strong>IE:</strong> Institución Educativa.</li>
+  <li><strong>PPP:</strong> Proyectos Pedagógicos Productivos.</li>
+</ul>
+
+<h3>B. Referencias</h3>
+<ul>
+  <li>Documento: "Iniciativa La Universidad en el Campo – 06 de agosto final.pptx".</li>
+  <li>Documento: "Versión 5 - Plan de trabajo, resumen del proyecto Ucampo.xlsx".</li>
+  <li>Documento: "INFORME TÉCNICO AVANCE DE INICIATIVAS_CEPE_ AGOSTO FINAL.pdf".</li>
+  <li>Documento: "ACTUAL - ARCHIVO DE PORCENTAJE DE CUMPLIMIENTO DE CADA PRODUCTO-junio16.xlsx".</li>
+</ul>
+
+<h3>C. Carpeta institucional de Drive</h3>
+<p>📁 <code>https://drive.google.com/drive/folders/1rgOSvr9fmi0sSieOndXpge9aY4vszU3I</code></p>
+
+<h3>D. Contactos</h3>
+<ul>
+  <li><strong>Responsable del proyecto:</strong> Sonia Isabel Villegas Duque.</li>
+  <li><strong>Organización:</strong> Comité de Cafeteros de Caldas.</li>
+  <li><strong>Programa:</strong> Comunidades de Cambio – CEPE.</li>
+</ul>
+
+<hr>
+<footer>
+  <p><strong>Fin del documento</strong></p>
+  <p>© 2026 CEPE · Comité de Cafeteros de Caldas · La Universidad en el Campo</p>
+</footer>
+
+</body>
+</html>

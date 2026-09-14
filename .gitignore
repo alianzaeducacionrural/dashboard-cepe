@@ -1,0 +1,7 @@
+# Documentos fuente internos (informes, presupuesto, PPTX de avance) — no son
+# necesarios para el sitio publicado y contienen más detalle interno del que
+# muestra el dashboard; no se suben a un repositorio público.
+/docs/
+
+node_modules/
+.DS_Store
