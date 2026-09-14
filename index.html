@@ -206,6 +206,7 @@
   .mes-cell-wrap:hover .mes-cell-quitar{opacity:1;}
   .obs-text{font-size:11.5px; color:var(--text-muted); max-width:280px;}
   .empty{padding:36px 20px; text-align:center; color:var(--text-muted); font-size:13px;}
+  .loader-ring{width:34px; height:34px; border-radius:50%; border:3.5px solid var(--border); border-top-color:var(--tierra); margin:0 auto 14px; animation:spin .8s linear infinite;}
   .icn{display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;}
   .icn-chip{width:34px; height:34px; border-radius:10px; background:var(--tierra-suave); color:var(--tierra);}
   .act-row td{background:var(--tierra-suave); border-bottom:1px solid var(--border);}
@@ -237,7 +238,7 @@
 
 <nav class="tabs" id="tabs"></nav>
 
-<main id="app"></main>
+<main id="app"><div class="empty"><div class="loader-ring"></div>Cargando…</div></main>
 
 <div class="footer-note">
   <strong>Fase 2 — Conectado al backend real.</strong> Los datos se leen en vivo desde Google Sheets a través de la Web App en Google Apps Script (sembrados originalmente desde el Informe Técnico de Avance CEPE agosto 2026, el archivo de % de cumplimiento por producto, el plan de trabajo/cronograma Ucampo v5 y la matriz de poblaciones). El panel admin ya escribe cambios reales en el Sheet: edición de productos y resolución de alertas.
@@ -392,7 +393,7 @@ async function apiPost(body){
 let PRIMERA_CARGA = true;
 async function cargarDatos(){
   const app = document.getElementById('app');
-  if(PRIMERA_CARGA) app.innerHTML = '<div class="empty">Cargando datos desde Google Sheets…</div>';
+  if(PRIMERA_CARGA) app.innerHTML = '<div class="empty"><div class="loader-ring"></div>Cargando datos desde Google Sheets…</div>';
   try{
     const [todo, dashboard] = await Promise.all([apiGet('getAll'), apiGet('getDashboard')]);
     DATA.objetivos = todo.objetivos;
