@@ -100,10 +100,21 @@ function computarProducto_(producto, mesActual, actividadesDelProducto) {
   });
 }
 
-/** `actividades` es la lista completa (de todos los productos); se filtra aquí por producto_id. */
+/**
+ * `actividades` es la lista completa (de todos los productos); se filtra aquí por producto_id.
+ * El `peso` de cada producto se calcula automáticamente como partes iguales dentro de su
+ * objetivo (100 / cantidad de productos de ese objetivo) — no se guarda a mano; cualquier
+ * valor que traiga la hoja en esa columna se ignora y se sobrescribe aquí.
+ */
 function computarProductos_(productos, mesActual, actividades) {
   actividades = actividades || [];
-  return productos.map(p => computarProducto_(p, mesActual, actividades.filter(a => a.producto_id === p.id)));
+  const conteoPorObjetivo = {};
+  productos.forEach(p => { conteoPorObjetivo[p.objetivo_id] = (conteoPorObjetivo[p.objetivo_id] || 0) + 1; });
+  return productos.map(p => {
+    const cantidad = conteoPorObjetivo[p.objetivo_id] || 1;
+    const peso = Math.round((100 / cantidad) * 10) / 10;
+    return computarProducto_(Object.assign({}, p, { peso: peso }), mesActual, actividades.filter(a => a.producto_id === p.id));
+  });
 }
 
 /**

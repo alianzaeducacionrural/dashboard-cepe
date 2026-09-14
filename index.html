@@ -112,7 +112,7 @@
   .kpi .label{font-size:12px; color:var(--text-muted); margin-top:3px;}
   .kpi .bar-bg{height:7px; border-radius:5px; background:var(--border); margin-top:11px; overflow:hidden;}
   .kpi .bar-fill{height:100%; width:100%; border-radius:5px; background:var(--azul-claro); transform-origin:left; transition:transform .5s ease;}
-  .kpi .tag{display:inline-flex; align-items:center; gap:5px; margin-top:9px; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px;}
+  .tag{display:inline-flex; align-items:center; gap:5px; margin-top:9px; font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; line-height:1.3;}
   .tag.ok{background:var(--verde-suave); color:var(--verde);} .tag.warn{background:var(--amarillo-sem-suave); color:var(--amarillo-sem);} .tag.bad{background:var(--rojo-suave); color:var(--rojo);}
   .hero-card{background:linear-gradient(160deg,var(--card),var(--card-2)); border:1px solid var(--border); border-radius:var(--radius-lg); padding:22px 24px; box-shadow:var(--shadow-md);}
   .barrow{display:flex; align-items:center; gap:10px; margin:11px 0; font-size:12.5px;}
@@ -164,9 +164,9 @@
     transition:.25s; max-width:320px;
   }
   .toast.show{opacity:1; transform:none;}
-  .modal-bg{position:fixed; inset:0; background:rgba(30,20,10,.5); display:none; align-items:center; justify-content:center; z-index:200; padding:16px;}
+  .modal-bg{position:fixed; inset:0; background:rgba(30,20,10,.5); display:none; align-items:center; justify-content:center; z-index:200; padding:16px; overflow-y:auto;}
   .modal-bg.show{display:flex;}
-  .modal{background:var(--card); border-radius:var(--radius-md); padding:24px; width:100%; max-width:340px; box-shadow:var(--shadow-lg);}
+  .modal{background:var(--card); border-radius:var(--radius-md); padding:24px; width:100%; max-width:340px; box-shadow:var(--shadow-lg); max-height:calc(100vh - 48px); overflow-y:auto;}
   .modal h3{margin-top:0; font-family:var(--font-display);}
   .modal input{width:100%; padding:11px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg); color:var(--text); margin:10px 0; font-family:var(--font-body);}
   .modal input:focus{outline:2px solid var(--azul-claro); outline-offset:1px;}
@@ -193,8 +193,17 @@
   }
   .admin-subnav button.active{background:var(--azul); color:#fff; border-color:var(--azul);}
   [data-theme="dark"] .admin-subnav button.active{background:var(--amarillo); color:var(--azul-oscuro); border-color:var(--amarillo);}
-  .mes-cell-btn{border:1px solid var(--border); border-radius:7px; width:100%; height:22px; cursor:pointer; transition:filter .15s;}
+  .mes-cell-btn{border:1px solid var(--border); border-radius:7px; width:100%; height:22px; cursor:pointer; transition:filter .15s; color:#fff; display:flex; align-items:center; justify-content:center;}
   .mes-cell-btn:hover{filter:brightness(0.92);}
+  .mes-cell-vacia{background:transparent; border:1px dashed var(--border-strong); color:var(--text-muted); opacity:.5;}
+  .mes-cell-vacia:hover{opacity:1; border-color:var(--tierra); color:var(--tierra); filter:none;}
+  .mes-cell-wrap{position:relative;}
+  .mes-cell-quitar{
+    position:absolute; top:-5px; right:-5px; width:14px; height:14px; padding:0; border-radius:50%;
+    background:var(--rojo); color:#fff; border:1.5px solid var(--card); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; opacity:0; transition:opacity .15s;
+  }
+  .mes-cell-wrap:hover .mes-cell-quitar{opacity:1;}
   .obs-text{font-size:11.5px; color:var(--text-muted); max-width:280px;}
   .empty{padding:36px 20px; text-align:center; color:var(--text-muted); font-size:13px;}
   .icn{display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;}
@@ -320,14 +329,32 @@ function colorIcon(color, size){
  * §9): ejecución territorial, estado general/MEL reportados cualitativamente,
  * deserción, universidades aliadas y meta de beneficiarios del período.
  */
-const INFO_ADICIONAL = {
-  territorial: 86,
-  estado_general: 'En tiempo',
-  estado_mel: 'En línea',
-  desercion: { cantidad: 2, base: 191 },
-  universidades: ['Universidad de Caldas','Universidad de Manizales','Universidad Católica de Manizales','Universidad Autónoma de Manizales'],
-  meta: { directos: { meta: 249, alcanzado: 249 }, indirectos: { meta: 0, alcanzado: 0 } },
+/**
+ * Datos que el dashboard necesita pero no se derivan de otra hoja (% territorial,
+ * estado narrativo, deserción, universidades, meta de beneficiarios). Vive en la
+ * hoja INFO_ADICIONAL del backend (fila única id=INFO1), editable desde Panel
+ * admin — ya no es un objeto fijo en el código. Se reconstruye la forma anidada
+ * que usa la UI a partir de las columnas planas que llegan de la API.
+ */
+let INFO_ADICIONAL = {
+  territorial: 0, estado_general: '', estado_mel: '',
+  desercion: { cantidad: 0, base: 0 }, universidades: [],
+  meta: { directos: { meta: 0, alcanzado: 0 }, indirectos: { meta: 0, alcanzado: 0 } },
 };
+function reconstruirInfoAdicional(cruda){
+  cruda = cruda || {};
+  INFO_ADICIONAL = {
+    territorial: Number(cruda.territorial) || 0,
+    estado_general: cruda.estado_general || '',
+    estado_mel: cruda.estado_mel || '',
+    desercion: { cantidad: Number(cruda.desercion_cantidad) || 0, base: Number(cruda.desercion_base) || 0 },
+    universidades: (cruda.universidades || '').split(',').map(s=>s.trim()).filter(Boolean),
+    meta: {
+      directos: { meta: Number(cruda.meta_directos_meta) || 0, alcanzado: Number(cruda.meta_directos_alcanzado) || 0 },
+      indirectos: { meta: Number(cruda.meta_indirectos_meta) || 0, alcanzado: Number(cruda.meta_indirectos_alcanzado) || 0 },
+    },
+  };
+}
 
 /* ===================== DATOS (cargados desde el backend en Apps Script) ===================== */
 let DATA = {
@@ -369,6 +396,7 @@ async function cargarDatos(){
     DATA.finanzas = todo.finanzas;
     DATA.alertas = todo.alertas;
     DATA.dashboard = dashboard;
+    reconstruirInfoAdicional(todo.infoAdicional);
     renderTabs(); renderView();
   }catch(err){
     app.innerHTML = `<div class="empty">${icon('alertTriangle',{size:28,color:'var(--rojo)'})}<div style="margin-top:8px;">No se pudo conectar con el backend.</div><span class="muted" style="font-size:11px;">${esc(err.message)}</span><br><br><button class="btn primary" onclick="cargarDatos()">${icon('refresh',{size:14})}Reintentar</button></div>`;
@@ -524,7 +552,6 @@ const TABS = [
   { id:'mel', label:'Indicadores MEL', icon:'chart' },
   { id:'beneficiarios', label:'Beneficiarios', icon:'cap' },
   { id:'finanzas', label:'Finanzas', icon:'wallet' },
-  { id:'instituciones', label:'Instituciones', icon:'building' },
   { id:'alertas', label:'Alertas', icon:'bell' },
 ];
 const ADMIN_TAB = { id:'admin', label:'Panel admin', icon:'settings' };
@@ -547,7 +574,7 @@ function renderTabs(){
 
 function renderView(){
   const app = document.getElementById('app');
-  const renderers = { dashboard:viewDashboard, productos:viewProductos, cronograma:viewCronograma, mensual:viewMensual, mel:viewMEL, beneficiarios:viewBeneficiarios, finanzas:viewFinanzas, instituciones:viewInstituciones, alertas:viewAlertas, admin:viewAdmin };
+  const renderers = { dashboard:viewDashboard, productos:viewProductos, cronograma:viewCronograma, mensual:viewMensual, mel:viewMEL, beneficiarios:viewBeneficiarios, finanzas:viewFinanzas, alertas:viewAlertas, admin:viewAdmin };
   if(currentTab === 'admin' && !ADMIN_MODE) currentTab = 'dashboard';
   app.innerHTML = `<div class="view active">${renderers[currentTab]()}</div>`;
   wireView();
@@ -575,14 +602,15 @@ function viewDashboard(){
       <div style="text-align:center;">
         ${arcGauge(d.avance_tecnico, tecnicoColor)}
         <div style="font-size:11.5px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:8px;">Avance técnico</div>
-        <span class="tag ${d.avance_tecnico>=70?'ok':d.avance_tecnico>=40?'warn':'bad'}" style="margin-top:8px;">${icon('trendUp',{size:12})}${INFO_ADICIONAL.estado_general}</span>
+        ${INFO_ADICIONAL.estado_general ? `<span class="tag ${d.avance_tecnico>=70?'ok':d.avance_tecnico>=40?'warn':'bad'}" style="margin-top:8px;">${icon('trendUp',{size:12})}${esc(INFO_ADICIONAL.estado_general)}</span>` : ''}
       </div>
       <div>
         ${bulletStat('Ejecución financiera', d.avance_financiero, 'var(--azul-claro)')}
         ${bulletStat('Ejecución territorial (SED y aliados)', INFO_ADICIONAL.territorial, 'var(--tierra)')}
-        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-          <span class="pill" style="background:var(--tierra-suave); color:var(--tierra);">Estado MEL: ${INFO_ADICIONAL.estado_mel}</span>
+        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; align-items:center;">
+          ${INFO_ADICIONAL.estado_mel ? `<span class="pill" style="background:var(--tierra-suave); color:var(--tierra);">Estado MEL: ${esc(INFO_ADICIONAL.estado_mel)}</span>` : ''}
           <span class="pill" style="background:var(--azul-sem-suave); color:var(--azul-sem);">${totalBenef} beneficiarios acumulados</span>
+          ${adminEditBtn('abrirEdicionInfoAdicionalAdmin')}
         </div>
       </div>
     </div>
@@ -742,7 +770,7 @@ function viewProductos(){
   </div>
   <div class="table-wrap">
     <table id="tablaProductos">
-      <thead><tr><th>Producto</th><th>Peso</th><th>Progreso (real vs. esperado)</th><th>Valor ejecutado</th><th>Observaciones</th></tr></thead>
+      <thead><tr><th>Producto</th><th>Peso</th><th>Progreso (avance vs. esperado)</th><th>Valor ejecutado</th><th>Observaciones</th></tr></thead>
       <tbody>${filas.join('')}</tbody>
     </table>
   </div>${ADMIN_MODE?`<p class="muted" style="font-size:11.5px; margin-top:10px;">Para editar, agregar o eliminar productos y actividades, ve a ${icon('settings',{size:11})} Panel admin.</p>`:''}`;
@@ -758,7 +786,7 @@ function filaProducto(p){
     <td>${p.peso}%</td>
     <td style="min-width:170px;">
       <div class="prog-track"><div class="prog-fill" style="transform:scaleX(${scaleX(p.pct_real)}); background:${colorHex(p.color)}"></div><div class="prog-marker" style="left:${Math.min(100,p.pct_esperado)}%"></div></div>
-      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--text-muted); margin-top:4px;"><span>Real: <strong>${p.pct_real}%</strong></span><span>Esperado: ${p.pct_esperado}%</span></div>
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--text-muted); margin-top:4px;"><span>Avance: <strong>${p.pct_real}%</strong></span><span>Esperado: ${p.pct_esperado}%</span></div>
     </td>
     <td>${fmtCOP(p.valor_ejecutado)}</td>
     <td class="obs-text" style="max-width:340px;">${esc(p.observaciones)}</td>
@@ -778,7 +806,7 @@ function filaActividad(a, prodId){
     <td style="min-width:170px;">
       <div class="prog-track"><div class="prog-fill" style="transform:scaleX(${scaleX(a.pct_avance)}); background:${colorHex(a.color)}"></div><div class="prog-marker" style="left:${Math.min(100,a.pct_esperado)}%"></div></div>
       <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--text-muted); margin-top:4px;">
-        <span>Real: <strong>${a.pct_avance}%</strong>${a.tipo_medicion==='meta'?` (${a.alcanzado} de ${a.meta})`:''}</span>
+        <span>Avance: <strong>${a.pct_avance}%</strong>${a.tipo_medicion==='meta'?` (${a.alcanzado} de ${a.meta})`:''}</span>
         <span>Esperado: ${a.pct_esperado}%</span>
       </div>
     </td>
@@ -796,20 +824,32 @@ function viewCronograma(){
   const objetivos = DATA.objetivos;
   const colspanMeses = CONFIG.meses.length;
   const filas = [];
-  const ganttBar = (item, tipo, pct, small) => {
+  const ganttBar = (item, tipo, pct, small, editable) => {
     const mesInicio = item.mes_inicio, mesFin = item.mes_fin;
     const esMensual = item.tipo_medicion === 'mensual';
     return CONFIG.meses.map((m,i)=>{
       const mes = i+1;
       const activo = mes>=mesInicio && mes<=mesFin;
-      if(!activo) return `<td class="cell"></td>`;
+      if(!activo){
+        if(ADMIN_MODE && editable){
+          return `<td class="cell"><button type="button" class="mes-cell-btn mes-cell-vacia" title="${esc(item.nombre)} - agregar ${CONFIG.meses[mes-1]} al rango de ejecución" onclick="extenderRangoCronograma('${tipo}','${item.id}',${mes})">${icon('plus',{size:10})}</button></td>`;
+        }
+        return `<td class="cell"></td>`;
+      }
+      const esBorde = (mes === mesInicio || mes === mesFin) && mesInicio !== mesFin;
+      const quitarBtn = (ADMIN_MODE && editable && esBorde)
+        ? `<button type="button" class="mes-cell-quitar" title="Quitar ${CONFIG.meses[mes-1]} del rango de ejecución" onclick="event.stopPropagation(); quitarMesCronograma('${tipo}','${item.id}',${mes})">${icon('x',{size:8})}</button>`
+        : '';
       if(esMensual){
         const estados = item.estados_mensuales || {};
         const estado = estados[mes] || estados[String(mes)] || 'no_ejecutado';
-        if(ADMIN_MODE){
-          return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${estado.replace('_',' ')} (clic para cambiar)" onclick="ciclarMes('${tipo}','${item.id}',${mes})"></button></td>`;
+        if(ADMIN_MODE && editable){
+          return `<td class="cell"><div class="mes-cell-wrap"><button type="button" class="mes-cell-btn" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${estado.replace('_',' ')} (clic para cambiar)" onclick="ciclarMes('${tipo}','${item.id}',${mes})"></button>${quitarBtn}</div></td>`;
         }
         return `<td class="cell"><div class="bar" style="background:${COLOR_MES_SOLID[estado]}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${estado.replace('_',' ')}"></div></td>`;
+      }
+      if(ADMIN_MODE && editable){
+        return `<td class="cell"><div class="mes-cell-wrap"><button type="button" class="mes-cell-btn" style="background:${colorHex(item.color)};" title="${esc(item.nombre)}: ${pct}% — clic para gestionar ejecución mes a mes" onclick="avisoCeldaNoMensual('${tipo}','${item.id}')"></button>${quitarBtn}</div></td>`;
       }
       return `<td class="cell"><div class="bar" style="background:${colorHex(item.color)}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)}: ${pct}%"></div></td>`;
     }).join('');
@@ -817,15 +857,16 @@ function viewCronograma(){
   objetivos.forEach(o => {
     filas.push(`<tr class="obj-group-header"><td colspan="${colspanMeses + 1}">${esc(o.nombre)}</td></tr>`);
     DATA.productos.filter(p => p.objetivo_id === o.id).forEach(p => {
-      filas.push(`<tr><td style="padding:8px 10px; font-size:12px; font-weight:600;">${esc(p.nombre)}</td>${ganttBar(p, 'producto', p.pct_real, false)}</tr>`);
+      const tieneActividades = DATA.actividades.some(a=>a.producto_id===p.id);
+      filas.push(`<tr><td style="padding:8px 10px; font-size:12px; font-weight:600;">${esc(p.nombre)}</td>${ganttBar(p, 'producto', p.pct_real, false, !tieneActividades)}</tr>`);
       DATA.actividades.filter(a => a.producto_id === p.id).forEach(a => {
-        filas.push(`<tr><td style="padding:5px 10px 5px 26px; font-size:11px; color:var(--text-muted);">↳ ${esc(a.nombre)}</td>${ganttBar(a, 'actividad', a.pct_avance, true)}</tr>`);
+        filas.push(`<tr><td style="padding:5px 10px 5px 26px; font-size:11px; color:var(--text-muted);">↳ ${esc(a.nombre)}</td>${ganttBar(a, 'actividad', a.pct_avance, true, true)}</tr>`);
       });
     });
   });
   return `
   <div class="section-title">${icon('calendar',{size:20,color:'var(--tierra)'})}Cronograma (marzo – noviembre 2026)</div>
-  <p class="muted" style="font-size:12.5px;">Agrupado por objetivo. Cada producto muestra sus actividades (cuando existen) como sub-filas, cada una con su propio rango de meses y estado.${ADMIN_MODE?' Los ítems de medición mensual (celdas con botón) se editan con clic: cicla entre no ejecutado, en proceso y ejecutado.':''}</p>
+  <p class="muted" style="font-size:12.5px;">Agrupado por objetivo. Cada producto muestra sus actividades (cuando existen) como sub-filas, cada una con su propio rango de meses y estado.${ADMIN_MODE?' Clic en una celda vacía agrega ese mes al rango; clic en una celda ya programada de medición mensual cicla su estado; la ✕ que aparece al pasar el mouse sobre el primer o último mes lo quita del rango.':''}</p>
   <div class="gantt">
     <table>
       <thead><tr><th style="min-width:240px;">Producto / actividad</th>${CONFIG.meses.map((m,i)=>`<th class="month">${m}</th>`).join('')}</tr></thead>
@@ -833,6 +874,37 @@ function viewCronograma(){
     </table>
   </div>`;
 }
+async function extenderRangoCronograma(tipo, id, mes){
+  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
+  const item = tipo === 'producto' ? DATA.productos.find(x=>x.id===id) : DATA.actividades.find(x=>x.id===id);
+  const cambios = { mes_inicio: Math.min(item.mes_inicio, mes), mes_fin: Math.max(item.mes_fin, mes) };
+  try{
+    await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios, token: TOKEN });
+    toast(`${CONFIG.meses[mes-1]} agregado al rango de ejecución.`);
+    await cargarDatos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+window.extenderRangoCronograma = extenderRangoCronograma;
+/** Solo puede quitar el primer o el último mes del rango (un rango de meses no puede tener huecos). */
+async function quitarMesCronograma(tipo, id, mes){
+  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
+  const item = tipo === 'producto' ? DATA.productos.find(x=>x.id===id) : DATA.actividades.find(x=>x.id===id);
+  if(item.mes_inicio === item.mes_fin){ toast('Ya tiene un solo mes programado. Si ya no aplica, elimínalo desde Panel admin.'); return; }
+  const cambios = {};
+  if(mes === item.mes_inicio) cambios.mes_inicio = item.mes_inicio + 1;
+  else if(mes === item.mes_fin) cambios.mes_fin = item.mes_fin - 1;
+  else { toast('Solo puedes quitar el primer o el último mes programado.'); return; }
+  try{
+    await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios, token: TOKEN });
+    toast(`${CONFIG.meses[mes-1]} quitado del rango de ejecución.`);
+    await cargarDatos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+window.quitarMesCronograma = quitarMesCronograma;
+function avisoCeldaNoMensual(tipo, id){
+  toast('Este ítem no usa medición mensual. Cámbialo a "mensual" desde Panel admin para marcar ejecutado/no ejecutado mes a mes.');
+}
+window.avisoCeldaNoMensual = avisoCeldaNoMensual;
 async function ciclarMes(tipo, id, mes){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
   const item = tipo === 'producto' ? DATA.productos.find(x=>x.id===id) : DATA.actividades.find(x=>x.id===id);
@@ -868,8 +940,8 @@ function viewMensual(){
   return `
   <div class="section-title">${icon('calendar',{size:20,color:'var(--tierra)'})}Vista mensual</div>
   <p class="muted" style="font-size:12.5px;">Elige un mes para ver todo lo que estaba programado en él (productos y actividades cuyo rango de meses lo incluye).</p>
-  <div class="toolbar" style="flex-wrap:wrap;">
-    ${CONFIG.meses.map((m,i)=>`<button class="btn ${i+1===mes?'primary':''}" onclick="seleccionarMes(${i+1})">${m}</button>`).join('')}
+  <div class="admin-subnav">
+    ${CONFIG.meses.map((m,i)=>`<button class="${i+1===mes?'active':''}" onclick="seleccionarMes(${i+1})">${m}</button>`).join('')}
   </div>
   <div style="margin-top:6px;">
     ${bloques.length ? bloques.join('') : '<div class="empty">Nada programado para este mes.</div>'}
@@ -937,14 +1009,16 @@ function viewBeneficiarios(){
   const totalDoc = Number(doc.mujeres||0) + Number(doc.hombres||0);
   const totalDir = Number(dir.mujeres||0) + Number(dir.hombres||0);
   const desc = INFO_ADICIONAL.desercion;
-  const pctDesercion = (desc.cantidad / desc.base * 100).toFixed(1);
+  const pctDesercion = desc.base ? (desc.cantidad / desc.base * 100).toFixed(1) : '0.0';
+  const metaDirectos = INFO_ADICIONAL.meta.directos;
+  const pctMetaDirectos = metaDirectos.meta ? Math.round((metaDirectos.alcanzado / metaDirectos.meta) * 1000) / 10 : 0;
   return `
   <div class="section-title">${icon('cap',{size:20,color:'var(--tierra)'})}Beneficiarios</div>
   <div class="grid kpis">
     <div class="card kpi"><h3>Estudiantes${adminEditBtn('abrirEdicionBeneficiario', 'estudiantes')}</h3><div class="value">${totalEst}</div><div class="label">${est.mujeres} mujeres · ${est.hombres} hombres</div></div>
     <div class="card kpi"><h3>Docentes${adminEditBtn('abrirEdicionBeneficiario', 'docentes')}</h3><div class="value">${totalDoc}</div><div class="label">${doc.mujeres} mujeres · ${doc.hombres} hombres</div></div>
     <div class="card kpi"><h3>Directivos docentes${adminEditBtn('abrirEdicionBeneficiario', 'directivos')}</h3><div class="value">${totalDir}</div><div class="label">${dir.mujeres} mujeres · ${dir.hombres} hombres</div></div>
-    <div class="card kpi"><h3>Deserción</h3><div class="value" style="color:${pctDesercion>5?'var(--rojo)':'var(--verde)'}">${pctDesercion}%</div><div class="label">${desc.cantidad} de ${desc.base} estudiantes matriculados</div></div>
+    <div class="card kpi"><h3>Deserción${adminEditBtn('abrirEdicionInfoAdicionalAdmin')}</h3><div class="value" style="color:${pctDesercion>5?'var(--rojo)':'var(--verde)'}">${pctDesercion}%</div><div class="label">${desc.cantidad} de ${desc.base} estudiantes matriculados</div></div>
   </div>
   <div class="grid cols2" style="margin-top:16px;">
     <div class="card">
@@ -953,16 +1027,16 @@ function viewBeneficiarios(){
       <div style="display:flex; align-items:center; gap:8px;">${barRow('Juventud (18-28 años)', totalEst ? (Number(juv.mujeres||0)+Number(juv.hombres||0))/totalEst*100 : 0, 'var(--amarillo-sem)')}${adminEditBtn('abrirEdicionBeneficiario', 'juventud_18_28')}</div>
     </div>
     <div class="card">
-      <h3>Cumplimiento de meta del período</h3>
-      ${barRow('Beneficiarios directos', INFO_ADICIONAL.meta.directos.alcanzado/INFO_ADICIONAL.meta.directos.meta*100, 'var(--verde)')}
-      <div class="muted" style="font-size:12px;">Meta: ${INFO_ADICIONAL.meta.directos.meta} · Alcanzado: ${INFO_ADICIONAL.meta.directos.alcanzado} (100%)</div>
+      <h3>Cumplimiento de meta del período${adminEditBtn('abrirEdicionInfoAdicionalAdmin')}</h3>
+      ${barRow('Beneficiarios directos', pctMetaDirectos, 'var(--verde)')}
+      <div class="muted" style="font-size:12px;">Meta: ${metaDirectos.meta} · Alcanzado: ${metaDirectos.alcanzado} (${pctMetaDirectos}%)</div>
     </div>
   </div>
   <div class="card" style="margin-top:16px;">
     <h3>Universidades aliadas</h3>
-    <p style="font-size:12.5px;">Los 191 estudiantes matriculados están distribuidos entre las siguientes universidades aliadas. <span class="muted">(Desagregación numérica por universidad pendiente de reporte oficial.)</span></p>
+    <p style="font-size:12.5px;">Estudiantes matriculados distribuidos entre las siguientes universidades aliadas. <span class="muted">(Desagregación numérica por universidad pendiente de reporte oficial.)</span></p>
     <div style="display:flex; flex-wrap:wrap; gap:8px;">
-      ${INFO_ADICIONAL.universidades.map(u=>`<span class="pill" style="background:var(--azul); color:#fff;">${u}</span>`).join('')}
+      ${INFO_ADICIONAL.universidades.length ? INFO_ADICIONAL.universidades.map(u=>`<span class="pill" style="background:var(--azul); color:#fff;">${esc(u)}</span>`).join('') : '<span class="muted" style="font-size:12px;">Sin universidades registradas.</span>'}
     </div>
   </div>
   <div class="card" style="margin-top:16px;">
@@ -989,6 +1063,27 @@ async function abrirEdicionBeneficiario(categoria){
   }catch(err){ toast('Error: '+err.message); }
 }
 window.abrirEdicionBeneficiario = abrirEdicionBeneficiario;
+async function abrirEdicionInfoAdicionalAdmin(){
+  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
+  const i = INFO_ADICIONAL;
+  const cambios = await openFormModal({ title:'Información adicional del dashboard', fields:[
+    { key:'territorial', label:'Ejecución territorial (SED y aliados) %', type:'number', value:i.territorial },
+    { key:'estado_general', label:'Estado general (texto corto, ej. "En tiempo")', type:'text', value:i.estado_general },
+    { key:'estado_mel', label:'Estado MEL (texto corto, ej. "En línea")', type:'text', value:i.estado_mel },
+    { key:'desercion_cantidad', label:'Deserción — cantidad', type:'number', value:i.desercion.cantidad },
+    { key:'desercion_base', label:'Deserción — base (total matriculados)', type:'number', value:i.desercion.base },
+    { key:'universidades', label:'Universidades aliadas (separadas por coma)', type:'textarea', value:i.universidades.join(', ') },
+    { key:'meta_directos_meta', label:'Meta de beneficiarios directos', type:'number', value:i.meta.directos.meta },
+    { key:'meta_directos_alcanzado', label:'Beneficiarios directos alcanzados', type:'number', value:i.meta.directos.alcanzado },
+  ]});
+  if(!cambios) return;
+  try{
+    await apiPost({ action:'updateInfoAdicional', cambios, token: TOKEN });
+    toast('Información adicional actualizada.');
+    await cargarDatos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+window.abrirEdicionInfoAdicionalAdmin = abrirEdicionInfoAdicionalAdmin;
 function barMini(v, max){
   const pct = Math.min(100, v/max*100);
   return `<div style="display:flex; align-items:center; gap:8px;"><div style="width:100px; height:10px; background:var(--border); border-radius:5px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--azul-claro);"></div></div><span style="font-size:12px;">${v}</span></div>`;
@@ -1063,26 +1158,24 @@ async function abrirEdicionTalento(id){
 window.abrirEdicionTalento = abrirEdicionTalento;
 
 /* ===================== INSTITUCIONES ===================== */
-function viewInstituciones(){
+/* ---- Instituciones (gestión movida al Panel admin) ---- */
+function adminTablaInstituciones(){
   const instituciones = DATA.instituciones;
   const totalEst26 = instituciones.reduce((s,i)=>s+(Number(i.estudiantes_2026)||0),0);
   return `
-  <div class="section-title">${icon('building',{size:20,color:'var(--tierra)'})}Instituciones educativas (${instituciones.length} IE rurales de Manizales)</div>
-  <div class="grid kpis">
-    <div class="card kpi"><h3>Estudiantes 2026</h3><div class="value">${totalEst26}</div></div>
-  </div>
-  <div class="table-wrap" style="margin-top:16px;">
-    <table><thead><tr><th>Institución</th><th>Sede</th><th>Estudiantes 2026</th>${ADMIN_MODE?'<th></th>':''}</tr></thead>
-    <tbody>${instituciones.map(i=>`<tr><td>${esc(i.nombre)}</td><td>${esc(i.sede)}</td><td>${i.estudiantes_2026??'—'}</td>${ADMIN_MODE?`<td>${adminEditBtn('abrirEdicionInstitucion', i.id)}</td>`:''}</tr>`).join('')}
-    <tr style="font-weight:700;"><td>TOTAL</td><td></td><td>${totalEst26}</td>${ADMIN_MODE?'<td></td>':''}</tr>
-    </tbody></table>
-  </div>`;
+  <div style="margin-bottom:12px;"><button class="btn primary" onclick="crearInstitucionAdmin()">${icon('plus',{size:13})}Agregar institución</button></div>
+  <div class="table-wrap"><table><thead><tr><th>Institución</th><th>Sede</th><th>Estudiantes 2026</th><th></th></tr></thead>
+  <tbody>${instituciones.map(i=>`<tr><td>${esc(i.nombre)}</td><td>${esc(i.sede)}</td><td>${i.estudiantes_2026??'—'}</td><td style="white-space:nowrap;">${adminEditBtn('abrirEdicionInstitucionAdmin', i.id)} ${btnEliminar('eliminarInstitucionAdmin', i.id)}</td></tr>`).join('')}
+  <tr style="font-weight:700;"><td>TOTAL</td><td></td><td>${totalEst26}</td><td></td></tr>
+  </tbody></table></div>`;
 }
-async function abrirEdicionInstitucion(id){
+async function abrirEdicionInstitucionAdmin(id){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
   const i = DATA.instituciones.find(x=>x.id===id);
   const cambios = await openFormModal({ title:i.nombre, fields:[
-    { key:'estudiantes_2026', label:'Estudiantes 2026', type:'number', value:i.estudiantes_2026 },
+    { key:'nombre', label:'Nombre', type:'text', value:i.nombre },
+    { key:'sede', label:'Sede', type:'text', value:i.sede || '' },
+    { key:'estudiantes_2026', label:'Estudiantes 2026', type:'number', value:i.estudiantes_2026 || 0 },
   ]});
   if(!cambios) return;
   if(Number.isNaN(cambios.estudiantes_2026)){ toast('Valor inválido.'); return; }
@@ -1092,7 +1185,35 @@ async function abrirEdicionInstitucion(id){
     await cargarDatos();
   }catch(err){ toast('Error: '+err.message); }
 }
-window.abrirEdicionInstitucion = abrirEdicionInstitucion;
+window.abrirEdicionInstitucionAdmin = abrirEdicionInstitucionAdmin;
+async function crearInstitucionAdmin(){
+  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
+  const cambios = await openFormModal({ title:'Nueva institución', fields:[
+    { key:'nombre', label:'Nombre', type:'text', value:'' },
+    { key:'sede', label:'Sede', type:'text', value:'' },
+    { key:'estudiantes_2026', label:'Estudiantes 2026', type:'number', value:0 },
+  ]});
+  if(!cambios) return;
+  if(!cambios.nombre){ toast('El nombre es obligatorio.'); return; }
+  try{
+    await apiPost(Object.assign({ action:'createInstitucion', token: TOKEN }, cambios));
+    toast('Institución creada.');
+    await cargarDatos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+window.crearInstitucionAdmin = crearInstitucionAdmin;
+async function eliminarInstitucionAdmin(id){
+  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
+  const i = DATA.instituciones.find(x=>x.id===id);
+  const ok = await confirmModal(`¿Eliminar la institución "${i.nombre}"?`, 'Eliminar');
+  if(!ok) return;
+  try{
+    await apiPost({ action:'deleteInstitucion', id, token: TOKEN });
+    toast('Institución eliminada.');
+    await cargarDatos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+window.eliminarInstitucionAdmin = eliminarInstitucionAdmin;
 
 /* ===================== ALERTAS ===================== */
 function viewAlertas(){
@@ -1117,11 +1238,12 @@ function viewAdmin(){
     { id:'productos', label:'Productos', icon:'box' },
     { id:'actividades', label:'Actividades', icon:'subArrow' },
     { id:'mel', label:'Indicadores MEL', icon:'chart' },
+    { id:'instituciones', label:'Instituciones', icon:'building' },
   ];
-  const renderers = { objetivos:adminTablaObjetivos, productos:adminTablaProductos, actividades:adminTablaActividades, mel:adminTablaMEL };
+  const renderers = { objetivos:adminTablaObjetivos, productos:adminTablaProductos, actividades:adminTablaActividades, mel:adminTablaMEL, instituciones:adminTablaInstituciones };
   return `
   <div class="section-title">${icon('settings',{size:20,color:'var(--tierra)'})}Panel de administración</div>
-  <p class="muted" style="font-size:12.5px;">Gestión completa: crear, editar y eliminar objetivos, productos, actividades e indicadores MEL, y configurar cómo se mide el avance de cada uno.</p>
+  <p class="muted" style="font-size:12.5px;">Gestión completa: crear, editar y eliminar objetivos, productos, actividades, indicadores MEL e instituciones, y configurar cómo se mide el avance de cada uno.</p>
   <div class="admin-subnav">
     ${subtabs.map(t=>`<button class="${t.id===ADMIN_SUBTAB?'active':''}" onclick="seleccionarSubtabAdmin('${t.id}')">${icon(t.icon,{size:14})}${t.label}</button>`).join('')}
   </div>
@@ -1137,14 +1259,16 @@ function btnEliminar(fnName, id){
 
 /* ---- Objetivos ---- */
 function adminTablaObjetivos(){
-  return `<div class="table-wrap"><table>
+  return `
+  <div style="margin-bottom:12px;"><button class="btn primary" onclick="crearObjetivoAdmin()">${icon('plus',{size:13})}Agregar objetivo</button></div>
+  <div class="table-wrap"><table>
     <thead><tr><th>Objetivo</th><th>Presupuestado</th><th>Ejecutado</th><th>Orden</th><th></th></tr></thead>
     <tbody>${DATA.objetivos.map(o=>`<tr>
       <td style="max-width:380px;">${esc(o.nombre)}</td>
       <td>${fmtCOP(o.presupuestado)}</td>
       <td>${fmtCOP(o.ejecutado)}</td>
       <td>${o.orden}</td>
-      <td>${adminEditBtn('abrirEdicionObjetivoAdmin', o.id)}</td>
+      <td style="white-space:nowrap;">${adminEditBtn('abrirEdicionObjetivoAdmin', o.id)} ${btnEliminar('eliminarObjetivoAdmin', o.id)}</td>
     </tr>`).join('')}</tbody>
   </table></div>`;
 }
@@ -1166,6 +1290,36 @@ async function abrirEdicionObjetivoAdmin(id){
   }catch(err){ toast('Error: '+err.message); }
 }
 window.abrirEdicionObjetivoAdmin = abrirEdicionObjetivoAdmin;
+async function crearObjetivoAdmin(){
+  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
+  const cambios = await openFormModal({ title:'Nuevo objetivo', fields:[
+    { key:'nombre', label:'Nombre', type:'text', value:'' },
+    { key:'descripcion', label:'Descripción', type:'textarea', value:'' },
+    { key:'presupuestado', label:'Presupuestado', type:'number', value:0 },
+    { key:'ejecutado', label:'Ejecutado', type:'number', value:0 },
+    { key:'orden', label:'Orden', type:'number', value:DATA.objetivos.length + 1 },
+  ]});
+  if(!cambios) return;
+  if(!cambios.nombre){ toast('El nombre es obligatorio.'); return; }
+  try{
+    await apiPost(Object.assign({ action:'createObjetivo', token: TOKEN }, cambios));
+    toast('Objetivo creado.');
+    await cargarDatos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+window.crearObjetivoAdmin = crearObjetivoAdmin;
+async function eliminarObjetivoAdmin(id){
+  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
+  const o = DATA.objetivos.find(x=>x.id===id);
+  const ok = await confirmModal(`¿Eliminar el objetivo "${o.nombre}"? Esto también elimina sus productos y actividades.`, 'Eliminar');
+  if(!ok) return;
+  try{
+    await apiPost({ action:'deleteObjetivo', id, token: TOKEN });
+    toast('Objetivo eliminado.');
+    await cargarDatos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+window.eliminarObjetivoAdmin = eliminarObjetivoAdmin;
 
 /* ---- Medición compartida (producto/actividad) ---- */
 function camposMedicionProducto(p){
@@ -1173,7 +1327,7 @@ function camposMedicionProducto(p){
   const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['manual','meta','mensual'], value:tipo, reactive:true };
   if(tipo === 'meta') return [sel, { key:'meta', label:'Meta', type:'number', value:p.meta || 0 }, { key:'alcanzado', label:'Alcanzado', type:'number', value:p.alcanzado || 0 }];
   if(tipo === 'mensual') return [sel, { key:'estados_mensuales', label:'Estado por mes', type:'meses', mesInicio:Number(p.mes_inicio)||1, mesFin:Number(p.mes_fin)||9, value:(p.estados_mensuales && typeof p.estados_mensuales==='object') ? p.estados_mensuales : {} }];
-  return [sel, { key:'pct_real', label:'% real', type:'number', value:p.pct_real || 0 }];
+  return [sel, { key:'pct_real', label:'% de avance', type:'number', value:p.pct_real || 0 }];
 }
 function camposMedicionActividad(a){
   const tipo = a.tipo_medicion || 'simple';
@@ -1188,7 +1342,7 @@ function adminTablaProductos(){
   return `
   <div style="margin-bottom:12px;"><button class="btn primary" onclick="crearProductoAdmin()">${icon('plus',{size:13})}Agregar producto</button></div>
   <div class="table-wrap"><table>
-    <thead><tr><th>Producto</th><th>Objetivo</th><th>Tipo medición</th><th>Meses</th><th>% real</th><th></th></tr></thead>
+    <thead><tr><th>Producto</th><th>Objetivo</th><th>Tipo medición</th><th>Meses</th><th>% de avance</th><th></th></tr></thead>
     <tbody>${DATA.productos.map(p=>{
       const obj = DATA.objetivos.find(o=>o.id===p.objetivo_id);
       const tieneAct = DATA.actividades.some(a=>a.producto_id===p.id);
@@ -1210,9 +1364,8 @@ async function abrirEdicionProductoAdmin(id){
   if(tieneActividades){
     const cambios = await openFormModal({
       title: p.nombre,
-      context: 'El % real y el rango de meses de este producto se calculan automáticamente a partir de sus actividades. Edítalas en la pestaña Actividades para cambiarlos.',
+      context: 'El % de avance y el rango de meses de este producto se calculan automáticamente a partir de sus actividades. Edítalas en la pestaña Actividades para cambiarlos.',
       fields: [
-        { key:'peso', label:'Peso (%)', type:'number', value:p.peso || 0 },
         { key:'responsable', label:'Responsable', type:'text', value:p.responsable || '' },
         { key:'valor_ejecutado', label:'Valor ejecutado', type:'number', value:p.valor_ejecutado || 0 },
         { key:'observaciones', label:'Observaciones', type:'textarea', value:p.observaciones || '' },
@@ -1224,7 +1377,6 @@ async function abrirEdicionProductoAdmin(id){
   }
   const camposBase = (obj) => [
     { key:'nombre', label:'Nombre', type:'text', value:obj.nombre },
-    { key:'peso', label:'Peso (%)', type:'number', value:obj.peso || 0 },
     { key:'mes_inicio', label:'Mes inicio', type:'number', value:obj.mes_inicio },
     { key:'mes_fin', label:'Mes fin', type:'number', value:obj.mes_fin },
     ...camposMedicionProducto(obj),
@@ -1250,7 +1402,6 @@ async function crearProductoAdmin(){
   const base = (vals) => [
     { key:'objetivo_id', label:'Objetivo', type:'select', options:objetivoOptions, value: vals.objetivo_id || objetivoOptions[0].value },
     { key:'nombre', label:'Nombre', type:'text', value: vals.nombre || '' },
-    { key:'peso', label:'Peso (%)', type:'number', value: vals.peso ?? 0 },
     { key:'mes_inicio', label:'Mes inicio', type:'number', value: vals.mes_inicio ?? 1 },
     { key:'mes_fin', label:'Mes fin', type:'number', value: vals.mes_fin ?? 1 },
     ...camposMedicionProducto(Object.assign({ tipo_medicion:'manual', pct_real:0 }, vals)),
@@ -1487,13 +1638,33 @@ function initTheme(){
     updateThemeIcon();
   });
 }
+/**
+ * Sesión de admin persistida en localStorage para no pedir la clave en cada carga
+ * de página. Refleja el mismo TTL de 30 min del token en el backend (CacheService);
+ * si expiró, se descarta y se vuelve a pedir la clave.
+ */
+const SESSION_KEY = 'ucampo_admin_session';
+function guardarSesionAdmin(token){
+  try{ localStorage.setItem(SESSION_KEY, JSON.stringify({ token, expira: Date.now() + 30*60*1000 })); }catch(e){}
+}
+function leerSesionAdmin(){
+  try{
+    const raw = localStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(!s || !s.token || !s.expira || Date.now() >= s.expira){ localStorage.removeItem(SESSION_KEY); return null; }
+    return s;
+  }catch(e){ return null; }
+}
+function borrarSesionAdmin(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+
 function addAdminExitButton(){
   if(document.getElementById('adminExitBtn')) return;
   const actions = document.querySelector('header.top .actions');
   const btn = document.createElement('button');
   btn.id = 'adminExitBtn'; btn.className = 'btn primary'; btn.innerHTML = icon('lockOpen',{size:15}) + 'Salir modo admin';
   btn.addEventListener('click', () => {
-    ADMIN_MODE = false; TOKEN = null; btn.remove(); toast('Modo administrador desactivado.'); renderView();
+    ADMIN_MODE = false; TOKEN = null; borrarSesionAdmin(); btn.remove(); toast('Modo administrador desactivado.'); renderView();
   });
   actions.appendChild(btn);
 }
@@ -1510,6 +1681,7 @@ function initAdmin(){
       const data = await apiPost({ action:'login', password: pass });
       TOKEN = data.token;
       ADMIN_MODE = true; modal.classList.remove('show'); document.getElementById('adminPass').value='';
+      guardarSesionAdmin(TOKEN);
       addAdminExitButton();
       toast('Modo administrador activado. Sesión válida por 30 minutos.');
       renderView();
@@ -1519,7 +1691,14 @@ function initAdmin(){
   // Acceso oculto: no hay botón visible en el dashboard público. Se abre con ?admin=1 en la URL.
   const params = new URLSearchParams(location.search);
   if(params.has('admin') || location.hash === '#admin'){
-    modal.classList.add('show');
+    const sesion = leerSesionAdmin();
+    if(sesion){
+      TOKEN = sesion.token;
+      ADMIN_MODE = true;
+      addAdminExitButton();
+    } else {
+      modal.classList.add('show');
+    }
   }
 }
 

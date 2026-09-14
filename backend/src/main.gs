@@ -17,6 +17,7 @@ function doGet(e) {
         instituciones: InstitucionesService.listar(),
         finanzas: FinanzasService.listar(),
         alertas: AlertasService.listar(),
+        infoAdicional: InfoAdicionalService.obtener(),
       }),
       getObjetivos: () => ObjetivosService.listar(),
       getProductos: () => ProductosService.listar(),
@@ -26,6 +27,7 @@ function doGet(e) {
       getInstituciones: () => InstitucionesService.listar(),
       getFinanzas: () => FinanzasService.listar(),
       getAlertas: () => AlertasService.listar(),
+      getInfoAdicional: () => InfoAdicionalService.obtener(),
       getDashboard: () => DashboardService.obtener(),
     };
     if (!action || !rutas[action]) return jsonError_('Acción no reconocida: ' + action);
@@ -50,7 +52,9 @@ function doPost(e) {
     }
 
     const rutas = {
+      createObjetivo: () => ObjetivosService.crear(body),
       updateObjetivo: () => ObjetivosService.actualizar(body),
+      deleteObjetivo: () => ObjetivosService.eliminar(body),
       createProducto: () => ProductosService.crear(body),
       updateProducto: () => ProductosService.actualizar(body),
       deleteProducto: () => ProductosService.eliminar(body),
@@ -61,11 +65,18 @@ function doPost(e) {
       updateMEL: () => MelService.actualizar(body),
       deleteMEL: () => MelService.eliminar(body),
       updateBeneficiarios: () => BeneficiariosService.actualizar(body),
+      createInstitucion: () => InstitucionesService.crear(body),
       updateInstitucion: () => InstitucionesService.actualizar(body),
+      deleteInstitucion: () => InstitucionesService.eliminar(body),
       updateFinanza: () => FinanzasService.actualizar(body),
       updateTalento: () => TalentoService.actualizar(body),
+      updateInfoAdicional: () => InfoAdicionalService.actualizar(body),
       createAlerta: () => AlertasService.crear(body),
       resolveAlerta: () => AlertasService.resolver(body),
+      // inicializar() es idempotente (crearHojas/sembrarSiVacia_ solo actúan sobre hojas
+      // faltantes o vacías) — segura para volver a llamarla cuando se agrega una hoja nueva
+      // al esquema (como INFO_ADICIONAL) sin tener que abrir el editor de Apps Script.
+      runInicializar: () => { inicializar(); return { ok: true }; },
     };
     if (!rutas[action]) return jsonError_('Acción no reconocida: ' + action);
     return jsonSuccess_(rutas[action]());

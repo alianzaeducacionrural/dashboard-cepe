@@ -25,6 +25,7 @@ function crearHojas() {
   asegurarHojaConEncabezados_(CONFIG.SHEETS.TALENTO_HUMANO, ['id', 'rol', 'valor_mes', 'meses', 'dedicacion', 'pct_ejecutado', 'valor_ejecutado']);
   asegurarHojaConEncabezados_(CONFIG.SHEETS.ALERTAS, ['id', 'tipo', 'severidad', 'descripcion', 'producto_id', 'indicador_id', 'fecha', 'estado', 'accion']);
   asegurarHojaConEncabezados_(CONFIG.SHEETS.LOGS, ['timestamp', 'accion', 'usuario_rol', 'detalle']);
+  asegurarHojaConEncabezados_(CONFIG.SHEETS.INFO_ADICIONAL, ['id', 'territorial', 'estado_general', 'estado_mel', 'desercion_cantidad', 'desercion_base', 'universidades', 'meta_directos_meta', 'meta_directos_alcanzado', 'meta_indirectos_meta', 'meta_indirectos_alcanzado']);
 }
 
 /**
@@ -145,6 +146,10 @@ function sembrarDatosReales() {
 
   sembrarSiVacia_(CONFIG.SHEETS.ALERTAS, [
     { id: 'AL-EXT-1', tipo: 'otro', severidad: 'baja', descripcion: 'Deserción de 2 estudiantes (1.05% de los 191 matriculados).', producto_id: '', indicador_id: '', fecha: '2026-07-31', estado: 'activa', accion: 'Revisar la afectación en indicadores ligados al número de estudiantes matriculados. Responsable: Coordinación general del proyecto.' },
+  ]);
+
+  sembrarSiVacia_(CONFIG.SHEETS.INFO_ADICIONAL, [
+    { id: 'INFO1', territorial: 0, estado_general: '', estado_mel: '', desercion_cantidad: 0, desercion_base: 0, universidades: '', meta_directos_meta: 0, meta_directos_alcanzado: 0, meta_indirectos_meta: 0, meta_indirectos_alcanzado: 0 },
   ]);
 }
 

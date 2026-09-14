@@ -19,6 +19,7 @@ const CONFIG = {
     TALENTO_HUMANO: 'TALENTO_HUMANO',
     ALERTAS: 'ALERTAS',
     LOGS: 'LOGS',
+    INFO_ADICIONAL: 'INFO_ADICIONAL',
   },
   // Mes actual del proyecto para el cálculo de semáforos (Mar=1 ... Nov=9).
   // Se actualiza manualmente cada mes hasta que se automatice con fecha real.
