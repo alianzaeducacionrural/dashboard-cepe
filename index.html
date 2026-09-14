@@ -382,9 +382,17 @@ async function apiPost(body){
   return json.data;
 }
 
+/**
+ * Solo la PRIMERA carga muestra la pantalla de "Cargando…" (o de error a pantalla
+ * completa si falla). Las siguientes veces (tras un guardado, un clic en el
+ * cronograma, etc.) se refresca en silencio: si algo ya se pintó de forma
+ * optimista en pantalla, un refresco no debe taparlo con un spinner ni con un
+ * teardown completo — solo corrige los datos y, si falla, avisa con un toast.
+ */
+let PRIMERA_CARGA = true;
 async function cargarDatos(){
   const app = document.getElementById('app');
-  app.innerHTML = '<div class="empty">Cargando datos desde Google Sheets…</div>';
+  if(PRIMERA_CARGA) app.innerHTML = '<div class="empty">Cargando datos desde Google Sheets…</div>';
   try{
     const [todo, dashboard] = await Promise.all([apiGet('getAll'), apiGet('getDashboard')]);
     DATA.objetivos = todo.objetivos;
@@ -397,8 +405,10 @@ async function cargarDatos(){
     DATA.alertas = todo.alertas;
     DATA.dashboard = dashboard;
     reconstruirInfoAdicional(todo.infoAdicional);
+    PRIMERA_CARGA = false;
     renderTabs(); renderView();
   }catch(err){
+    if(!PRIMERA_CARGA){ toast('No se pudo actualizar: ' + err.message); return; }
     app.innerHTML = `<div class="empty">${icon('alertTriangle',{size:28,color:'var(--rojo)'})}<div style="margin-top:8px;">No se pudo conectar con el backend.</div><span class="muted" style="font-size:11px;">${esc(err.message)}</span><br><br><button class="btn primary" onclick="cargarDatos()">${icon('refresh',{size:14})}Reintentar</button></div>`;
   }
 }
@@ -874,31 +884,43 @@ function viewCronograma(){
     </table>
   </div>`;
 }
+/**
+ * Las 3 acciones de clic del cronograma son "optimistas": mutan el objeto en DATA
+ * y vuelven a pintar la vista actual DE INMEDIATO (sin red, sin pantalla de carga),
+ * y solo después mandan el cambio real al backend en segundo plano. Si el guardado
+ * falla, `cargarDatos()` (en modo silencioso, ver arriba) trae de vuelta el estado
+ * real del Sheet y un toast avisa qué pasó — así no hay que esperar un viaje de
+ * red completo para ver el clic reflejado.
+ */
 async function extenderRangoCronograma(tipo, id, mes){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
-  const item = tipo === 'producto' ? DATA.productos.find(x=>x.id===id) : DATA.actividades.find(x=>x.id===id);
+  const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
+  const item = lista.find(x=>x.id===id);
   const cambios = { mes_inicio: Math.min(item.mes_inicio, mes), mes_fin: Math.max(item.mes_fin, mes) };
+  Object.assign(item, cambios);
+  renderView();
   try{
     await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios, token: TOKEN });
-    toast(`${CONFIG.meses[mes-1]} agregado al rango de ejecución.`);
-    await cargarDatos();
-  }catch(err){ toast('Error: '+err.message); }
+    cargarDatos();
+  }catch(err){ toast('No se pudo guardar: '+err.message); cargarDatos(); }
 }
 window.extenderRangoCronograma = extenderRangoCronograma;
 /** Solo puede quitar el primer o el último mes del rango (un rango de meses no puede tener huecos). */
 async function quitarMesCronograma(tipo, id, mes){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
-  const item = tipo === 'producto' ? DATA.productos.find(x=>x.id===id) : DATA.actividades.find(x=>x.id===id);
+  const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
+  const item = lista.find(x=>x.id===id);
   if(item.mes_inicio === item.mes_fin){ toast('Ya tiene un solo mes programado. Si ya no aplica, elimínalo desde Panel admin.'); return; }
   const cambios = {};
   if(mes === item.mes_inicio) cambios.mes_inicio = item.mes_inicio + 1;
   else if(mes === item.mes_fin) cambios.mes_fin = item.mes_fin - 1;
   else { toast('Solo puedes quitar el primer o el último mes programado.'); return; }
+  Object.assign(item, cambios);
+  renderView();
   try{
     await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios, token: TOKEN });
-    toast(`${CONFIG.meses[mes-1]} quitado del rango de ejecución.`);
-    await cargarDatos();
-  }catch(err){ toast('Error: '+err.message); }
+    cargarDatos();
+  }catch(err){ toast('No se pudo guardar: '+err.message); cargarDatos(); }
 }
 window.quitarMesCronograma = quitarMesCronograma;
 function avisoCeldaNoMensual(tipo, id){
@@ -907,15 +929,18 @@ function avisoCeldaNoMensual(tipo, id){
 window.avisoCeldaNoMensual = avisoCeldaNoMensual;
 async function ciclarMes(tipo, id, mes){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
-  const item = tipo === 'producto' ? DATA.productos.find(x=>x.id===id) : DATA.actividades.find(x=>x.id===id);
+  const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
+  const item = lista.find(x=>x.id===id);
   const estados = Object.assign({}, item.estados_mensuales || {});
   const actual = estados[mes] || estados[String(mes)] || 'no_ejecutado';
   estados[mes] = CICLO_MES[actual];
+  item.estados_mensuales = estados;
+  renderView();
   const cambios = { estados_mensuales: JSON.stringify(estados) };
   try{
     await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios, token: TOKEN });
-    await cargarDatos();
-  }catch(err){ toast('Error: '+err.message); }
+    cargarDatos();
+  }catch(err){ toast('No se pudo guardar: '+err.message); cargarDatos(); }
 }
 window.ciclarMes = ciclarMes;
 
