@@ -197,13 +197,6 @@
   .mes-cell-btn:hover{filter:brightness(0.92);}
   .mes-cell-vacia{background:transparent; border:1px dashed var(--border-strong); color:var(--text-muted); opacity:.5;}
   .mes-cell-vacia:hover{opacity:1; border-color:var(--tierra); color:var(--tierra); filter:none;}
-  .mes-cell-wrap{position:relative;}
-  .mes-cell-quitar{
-    position:absolute; top:-5px; right:-5px; width:14px; height:14px; padding:0; border-radius:50%;
-    background:var(--rojo); color:#fff; border:1.5px solid var(--card); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; opacity:0; transition:opacity .15s;
-  }
-  .mes-cell-wrap:hover .mes-cell-quitar{opacity:1;}
   .obs-text{font-size:11.5px; color:var(--text-muted); max-width:280px;}
   .empty{padding:36px 20px; text-align:center; color:var(--text-muted); font-size:13px;}
   .loader-ring{width:34px; height:34px; border-radius:50%; border:3.5px solid var(--border); border-top-color:var(--tierra); margin:0 auto 14px; animation:spin .8s linear infinite;}
@@ -837,28 +830,22 @@ function viewCronograma(){
     return CONFIG.meses.map((m,i)=>{
       const mes = i+1;
       const activo = mes>=mesInicio && mes<=mesFin;
-      if(!activo){
-        if(ADMIN_MODE && editable){
-          return `<td class="cell"><button type="button" class="mes-cell-btn mes-cell-vacia" title="${esc(item.nombre)} - agregar ${CONFIG.meses[mes-1]} al rango de ejecución" onclick="extenderRangoCronograma('${tipo}','${item.id}',${mes})">${icon('plus',{size:10})}</button></td>`;
+      if(ADMIN_MODE && editable){
+        if(!activo){
+          return `<td class="cell"><button type="button" class="mes-cell-btn mes-cell-vacia" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: gestionar" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})">${icon('plus',{size:10})}</button></td>`;
         }
-        return `<td class="cell"></td>`;
+        if(esMensual){
+          const estados = item.estados_mensuales || {};
+          const estado = estados[mes] || estados[String(mes)] || 'no_ejecutado';
+          return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${estado.replace('_',' ')} (clic para gestionar)" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})"></button></td>`;
+        }
+        return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${colorHex(item.color)};" title="${esc(item.nombre)}: ${pct}% — clic para gestionar este mes" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})"></button></td>`;
       }
-      const esBorde = (mes === mesInicio || mes === mesFin) && mesInicio !== mesFin;
-      const quitarBtn = (ADMIN_MODE && editable && esBorde)
-        ? `<button type="button" class="mes-cell-quitar" title="Quitar ${CONFIG.meses[mes-1]} del rango de ejecución" onclick="event.stopPropagation(); quitarMesCronograma('${tipo}','${item.id}',${mes})">${icon('x',{size:8})}</button>`
-        : '';
-      // Cualquier celda ya programada se gestiona igual, sea o no tipo_medicion 'mensual':
-      // si no lo era, ciclarMes() lo convierte a 'mensual' en el mismo clic (ver esa función).
+      if(!activo) return `<td class="cell"></td>`;
       if(esMensual){
         const estados = item.estados_mensuales || {};
         const estado = estados[mes] || estados[String(mes)] || 'no_ejecutado';
-        if(ADMIN_MODE && editable){
-          return `<td class="cell"><div class="mes-cell-wrap"><button type="button" class="mes-cell-btn" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${estado.replace('_',' ')} (clic para cambiar)" onclick="ciclarMes('${tipo}','${item.id}',${mes})"></button>${quitarBtn}</div></td>`;
-        }
         return `<td class="cell"><div class="bar" style="background:${COLOR_MES_SOLID[estado]}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${estado.replace('_',' ')}"></div></td>`;
-      }
-      if(ADMIN_MODE && editable){
-        return `<td class="cell"><div class="mes-cell-wrap"><button type="button" class="mes-cell-btn" style="background:${colorHex(item.color)};" title="${esc(item.nombre)}: ${pct}% — clic para marcar ejecutado/en proceso/no ejecutado" onclick="ciclarMes('${tipo}','${item.id}',${mes})"></button>${quitarBtn}</div></td>`;
       }
       return `<td class="cell"><div class="bar" style="background:${colorHex(item.color)}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)}: ${pct}%"></div></td>`;
     }).join('');
@@ -875,7 +862,7 @@ function viewCronograma(){
   });
   return `
   <div class="section-title">${icon('calendar',{size:20,color:'var(--tierra)'})}Cronograma (marzo – noviembre 2026)</div>
-  <p class="muted" style="font-size:12.5px;">Agrupado por objetivo. Cada producto muestra sus actividades (cuando existen) como sub-filas, cada una con su propio rango de meses y estado.${ADMIN_MODE?' Clic en una celda vacía agrega ese mes al rango; clic en una celda ya programada cicla su estado (no ejecutado → en proceso → ejecutado); la ✕ que aparece al pasar el mouse sobre el primer o último mes lo quita del rango.':''}</p>
+  <p class="muted" style="font-size:12.5px;">Agrupado por objetivo. Cada producto muestra sus actividades (cuando existen) como sub-filas, cada una con su propio rango de meses y estado.${ADMIN_MODE?' Clic en cualquier celda abre una ventana para gestionar ese mes: programarlo, cambiar su estado o quitarlo.':''}</p>
   <div class="gantt">
     <table>
       <thead><tr><th style="min-width:240px;">Producto / actividad</th>${CONFIG.meses.map((m,i)=>`<th class="month">${m}</th>`).join('')}</tr></thead>
@@ -891,62 +878,71 @@ function viewCronograma(){
  * real del Sheet y un toast avisa qué pasó — así no hay que esperar un viaje de
  * red completo para ver el clic reflejado.
  */
-async function extenderRangoCronograma(tipo, id, mes){
-  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
-  const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
-  const item = lista.find(x=>x.id===id);
-  const cambios = { mes_inicio: Math.min(item.mes_inicio, mes), mes_fin: Math.max(item.mes_fin, mes) };
-  Object.assign(item, cambios);
-  renderView();
-  try{
-    await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios, token: TOKEN });
-    cargarDatos();
-  }catch(err){ toast('No se pudo guardar: '+err.message); cargarDatos(); }
-}
-window.extenderRangoCronograma = extenderRangoCronograma;
 /** Solo puede quitar el primer o el último mes del rango (un rango de meses no puede tener huecos). */
-async function quitarMesCronograma(tipo, id, mes){
-  if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
+function quitarMesDelRango_(item, mes){
+  if(item.mes_inicio === item.mes_fin) return null;
+  if(mes === item.mes_inicio) return { mes_inicio: item.mes_inicio + 1 };
+  if(mes === item.mes_fin) return { mes_fin: item.mes_fin - 1 };
+  return null;
+}
+/** Aplica el cambio de inmediato en DATA + repinta (optimista), y guarda en segundo plano. */
+async function guardarCambiosMes_(tipo, id, cambiosLocal, cambiosApi){
   const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
   const item = lista.find(x=>x.id===id);
-  if(item.mes_inicio === item.mes_fin){ toast('Ya tiene un solo mes programado. Si ya no aplica, elimínalo desde Panel admin.'); return; }
-  const cambios = {};
-  if(mes === item.mes_inicio) cambios.mes_inicio = item.mes_inicio + 1;
-  else if(mes === item.mes_fin) cambios.mes_fin = item.mes_fin - 1;
-  else { toast('Solo puedes quitar el primer o el último mes programado.'); return; }
-  Object.assign(item, cambios);
+  Object.assign(item, cambiosLocal);
   renderView();
   try{
-    await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios, token: TOKEN });
+    await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios: cambiosApi, token: TOKEN });
     cargarDatos();
   }catch(err){ toast('No se pudo guardar: '+err.message); cargarDatos(); }
 }
-window.quitarMesCronograma = quitarMesCronograma;
+const ESTADO_MES_OPCIONES = [
+  { value:'fuera_rango', label:'No programado (fuera del rango)' },
+  { value:'no_ejecutado', label:'Programado — no ejecutado' },
+  { value:'en_proceso', label:'Programado — en proceso' },
+  { value:'ejecutado', label:'Programado — ejecutado' },
+];
 /**
- * Cicla el estado de un mes (no_ejecutado -> en_proceso -> ejecutado). Si el ítem
- * todavía no era de medición 'mensual', lo convierte en el mismo clic — así
- * cualquier producto/actividad se puede gestionar mes a mes directo desde el
- * Cronograma, sin tener que ir primero a Panel admin a cambiar su tipo_medicion.
+ * Modal único para gestionar un mes de un producto/actividad desde el Cronograma
+ * o Vista mensual: programarlo, cambiar su estado, o quitarlo — todo en un solo
+ * lugar en vez de acciones sueltas por celda. Si el ítem no era de medición
+ * 'mensual', se convierte automáticamente al guardar un estado real (no al
+ * dejarlo "fuera de rango"), para no gestionar mes a mes algo que no aplica.
  */
-async function ciclarMes(tipo, id, mes){
+async function abrirGestionMes(tipo, id, mes){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
   const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
   const item = lista.find(x=>x.id===id);
-  const estados = Object.assign({}, item.estados_mensuales || {});
-  const actual = estados[mes] || estados[String(mes)] || 'no_ejecutado';
-  estados[mes] = CICLO_MES[actual];
-  const eraMensual = item.tipo_medicion === 'mensual';
-  const cambios = { estados_mensuales: JSON.stringify(estados) };
-  if(!eraMensual) cambios.tipo_medicion = 'mensual';
-  Object.assign(item, { estados_mensuales: estados, tipo_medicion: cambios.tipo_medicion || item.tipo_medicion });
-  renderView();
-  if(!eraMensual) toast(`Cambiado a medición mensual. ${CONFIG.meses[mes-1]}: ${estados[mes].replace('_',' ')}.`);
-  try{
-    await apiPost({ action: tipo === 'producto' ? 'updateProducto' : 'updateActividad', id, cambios, token: TOKEN });
-    cargarDatos();
-  }catch(err){ toast('No se pudo guardar: '+err.message); cargarDatos(); }
+  const enRango = mes >= item.mes_inicio && mes <= item.mes_fin;
+  const estadosActuales = item.estados_mensuales || {};
+  const valorActual = enRango ? (estadosActuales[mes] || estadosActuales[String(mes)] || 'no_ejecutado') : 'fuera_rango';
+
+  const respuesta = await openFormModal({
+    title: item.nombre,
+    context: `Mes: ${CONFIG.meses[mes-1]}`,
+    fields: [{ key:'estado', label:'Estado de este mes', type:'select', options:ESTADO_MES_OPCIONES, value:valorActual }],
+  });
+  if(!respuesta) return;
+
+  if(respuesta.estado === 'fuera_rango'){
+    if(!enRango) return;
+    const cambiosRango = quitarMesDelRango_(item, mes);
+    if(!cambiosRango){ toast(item.mes_inicio === item.mes_fin ? 'Ya tiene un solo mes programado. Si ya no aplica, elimínalo desde Panel admin.' : 'Solo puedes quitar el primer o el último mes programado.'); return; }
+    return guardarCambiosMes_(tipo, id, cambiosRango, cambiosRango);
+  }
+
+  const nuevosEstados = Object.assign({}, estadosActuales, { [mes]: respuesta.estado });
+  const cambiosLocal = { estados_mensuales: nuevosEstados };
+  const cambiosApi = { estados_mensuales: JSON.stringify(nuevosEstados) };
+  if(item.tipo_medicion !== 'mensual'){ cambiosLocal.tipo_medicion = 'mensual'; cambiosApi.tipo_medicion = 'mensual'; }
+  if(!enRango){
+    const nuevoInicio = Math.min(item.mes_inicio, mes), nuevoFin = Math.max(item.mes_fin, mes);
+    cambiosLocal.mes_inicio = nuevoInicio; cambiosLocal.mes_fin = nuevoFin;
+    cambiosApi.mes_inicio = nuevoInicio; cambiosApi.mes_fin = nuevoFin;
+  }
+  return guardarCambiosMes_(tipo, id, cambiosLocal, cambiosApi);
 }
-window.ciclarMes = ciclarMes;
+window.abrirGestionMes = abrirGestionMes;
 
 /* ===================== VISTA MENSUAL ===================== */
 let MES_SELECCIONADO = CONFIG.mesActual;
@@ -956,9 +952,10 @@ function viewMensual(){
   DATA.objetivos.forEach(o => {
     const filasObjetivo = [];
     DATA.productos.filter(p => p.objetivo_id === o.id && mes>=p.mes_inicio && mes<=p.mes_fin).forEach(p => {
-      filasObjetivo.push(filaMensual(p, 'producto', mes, false));
+      const tieneActividades = DATA.actividades.some(a=>a.producto_id===p.id);
+      filasObjetivo.push(filaMensual(p, 'producto', mes, false, !tieneActividades));
       DATA.actividades.filter(a => a.producto_id === p.id && mes>=a.mes_inicio && mes<=a.mes_fin).forEach(a => {
-        filasObjetivo.push(filaMensual(a, 'actividad', mes, true));
+        filasObjetivo.push(filaMensual(a, 'actividad', mes, true, true));
       });
     });
     if(filasObjetivo.length){
@@ -979,14 +976,14 @@ function viewMensual(){
 function seleccionarMes(mes){ MES_SELECCIONADO = mes; renderView(); }
 window.seleccionarMes = seleccionarMes;
 
-function filaMensual(item, tipo, mes, esHija){
+function filaMensual(item, tipo, mes, esHija, editable){
   const esMensual = item.tipo_medicion === 'mensual';
   const estados = item.estados_mensuales || {};
   const estadoMes = estados[mes] || estados[String(mes)] || 'no_ejecutado';
   const pct = tipo === 'producto' ? item.pct_real : item.pct_avance;
-  const accion = esMensual
-    ? (ADMIN_MODE ? `<button class="btn" style="padding:5px 11px; font-size:11px; background:var(--tierra-suave); color:var(--tierra); border-color:transparent;" onclick="ciclarMes('${tipo}','${item.id}',${mes})">${icon('refresh',{size:11})}Cambiar estado</button>` : '')
-    : (ADMIN_MODE ? `<button class="btn" style="padding:5px 11px; font-size:11px; background:var(--tierra-suave); color:var(--tierra); border-color:transparent;" onclick="${tipo==='producto'?'abrirEdicionProductoAdmin':'abrirEdicionActividadAdmin'}('${item.id}')">${icon('pencil',{size:11})}Editar</button>` : '');
+  const accion = (ADMIN_MODE && editable)
+    ? `<button class="btn" style="padding:5px 11px; font-size:11px; background:var(--tierra-suave); color:var(--tierra); border-color:transparent;" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})">${icon('refresh',{size:11})}Gestionar mes</button>`
+    : '';
   return `<div class="card" style="margin-bottom:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; ${esHija?'margin-left:26px; background:var(--tierra-suave);':''}">
     <div>
       <div style="font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px;">${esHija?icon('subArrow',{size:12,color:'var(--tierra)'}):''}${esc(item.nombre)}</div>
