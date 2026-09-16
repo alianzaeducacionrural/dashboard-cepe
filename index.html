@@ -153,6 +153,9 @@
   .gantt th.month{text-align:center; min-width:60px;}
   .obj-group-header td{background:var(--azul); color:#fff; font-weight:600; font-size:13px; padding:11px 14px; border-bottom:none; font-family:var(--font-display);}
   [data-theme="dark"] .obj-group-header td{background:var(--azul-claro); color:var(--azul-oscuro);}
+  .obj-tabla-titulo{background:var(--azul); color:#fff; font-family:var(--font-display); font-size:13px; border-radius:var(--radius-sm) var(--radius-sm) 0 0;}
+  [data-theme="dark"] .obj-tabla-titulo{background:var(--azul-claro); color:var(--azul-oscuro);}
+  .obj-tabla-block .table-wrap{border-top-left-radius:0; border-top-right-radius:0;}
   .prog-track{position:relative; height:15px; background:var(--border); border-radius:8px; overflow:visible;}
   .prog-fill{height:100%; width:100%; border-radius:8px; transform-origin:left; transition:transform .5s ease;}
   .prog-marker{position:absolute; top:-3px; width:3px; height:21px; background:var(--text); opacity:.4; border-radius:2px;}
@@ -764,16 +767,22 @@ function tipoLabel(t){
 /* ===================== PRODUCTOS ===================== */
 function viewProductos(){
   const objetivos = DATA.objetivos;
-  const filas = [];
-  objetivos.forEach(o => {
-    filas.push(`<tr class="obj-group-header" data-objetivo-header="${o.id}"><td colspan="5">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-        <span>${esc(o.nombre)}</span>
-        <span style="font-weight:600; opacity:.9;">${fmtPct(o.avance_actual)} de avance · ${fmtCOP(o.ejecutado)} ejecutados</span>
+  const tablas = objetivos.map(o => {
+    const filas = DATA.productos.filter(p => p.objetivo_id === o.id).map(p => filaProducto(p)).join('');
+    return `
+    <div class="obj-tabla-block" data-objetivo-header="${o.id}" style="margin-bottom:24px;">
+      <div class="obj-tabla-titulo" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:13px 16px;">
+        <span style="font-weight:600;">${esc(o.nombre)}</span>
+        <span style="font-weight:600; opacity:.9; white-space:nowrap;">${fmtPct(o.avance_actual)} de avance · ${fmtCOP(o.ejecutado)} ejecutados</span>
       </div>
-    </td></tr>`);
-    DATA.productos.filter(p => p.objetivo_id === o.id).forEach(p => filas.push(filaProducto(p)));
-  });
+      <div class="table-wrap">
+        <table class="tabla-productos-objetivo">
+          <thead><tr><th>Producto</th><th>Peso</th><th>Progreso (avance vs. esperado)</th><th>Valor ejecutado</th><th>Observaciones</th></tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
   return `
   <div class="section-title">${icon('box',{size:20,color:'var(--tierra)'})}Productos</div>
   <div class="toolbar">
@@ -784,12 +793,8 @@ function viewProductos(){
       <option value="en_riesgo">En riesgo</option><option value="retrasado">Retrasado</option><option value="no_iniciado">No iniciado</option>
     </select>
   </div>
-  <div class="table-wrap">
-    <table id="tablaProductos">
-      <thead><tr><th>Producto</th><th>Peso</th><th>Progreso (avance vs. esperado)</th><th>Valor ejecutado</th><th>Observaciones</th></tr></thead>
-      <tbody>${filas.join('')}</tbody>
-    </table>
-  </div>${ADMIN_MODE?`<p class="muted" style="font-size:11.5px; margin-top:10px;">Para editar, agregar o eliminar productos y actividades, ve a ${icon('settings',{size:11})} Panel admin.</p>`:''}`;
+  <div id="productosTablas">${tablas}</div>
+  ${ADMIN_MODE?`<p class="muted" style="font-size:11.5px; margin-top:10px;">Para editar, agregar o eliminar productos y actividades, ve a ${icon('settings',{size:11})} Panel admin.</p>`:''}`;
 }
 function filaProducto(p){
   const actividades = DATA.actividades.filter(a => a.producto_id === p.id);
@@ -1381,14 +1386,20 @@ function camposMedicionProducto(p){
   const tipo = p.tipo_medicion || 'manual';
   const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['manual','meta','mensual'], value:tipo, reactive:true };
   if(tipo === 'meta') return [sel, { key:'meta', label:'Meta', type:'number', value:p.meta || 0 }, { key:'alcanzado', label:'Alcanzado', type:'number', value:p.alcanzado || 0 }];
-  if(tipo === 'mensual') return [sel, { key:'estados_mensuales', label:'Estado por mes', type:'meses', value:(p.estados_mensuales && typeof p.estados_mensuales==='object') ? p.estados_mensuales : {} }];
+  if(tipo === 'mensual') return [sel,
+    { key:'pct_real', label:'% de avance real (según reporte oficial)', type:'number', value:p.pct_real || 0 },
+    { key:'estados_mensuales', label:'Cronograma (meses programados)', type:'meses', value:(p.estados_mensuales && typeof p.estados_mensuales==='object') ? p.estados_mensuales : {} },
+  ];
   return [sel, { key:'pct_real', label:'% de avance', type:'number', value:p.pct_real || 0 }];
 }
 function camposMedicionActividad(a){
   const tipo = a.tipo_medicion || 'simple';
   const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['simple','meta','mensual'], value:tipo, reactive:true };
   if(tipo === 'meta') return [sel, { key:'meta', label:'Meta', type:'number', value:a.meta || 0 }, { key:'alcanzado', label:'Alcanzado', type:'number', value:a.alcanzado || 0 }];
-  if(tipo === 'mensual') return [sel, { key:'estados_mensuales', label:'Estado por mes', type:'meses', value:(a.estados_mensuales && typeof a.estados_mensuales==='object') ? a.estados_mensuales : {} }];
+  if(tipo === 'mensual') return [sel,
+    { key:'pct_real', label:'% de avance real (según reporte oficial)', type:'number', value:a.pct_real || 0 },
+    { key:'estados_mensuales', label:'Cronograma (meses programados)', type:'meses', value:(a.estados_mensuales && typeof a.estados_mensuales==='object') ? a.estados_mensuales : {} },
+  ];
   return [sel, { key:'completada', label:'Marcar como completada', type:'checkbox', value:!!a.completada }];
 }
 
@@ -1630,7 +1641,7 @@ function wireView(){
     const applyProd = () => {
       const visibleObjetivos = new Set();
       const visibleProductos = new Set();
-      document.querySelectorAll('#tablaProductos tbody tr[data-nombre]').forEach(tr => {
+      document.querySelectorAll('#productosTablas tbody tr[data-nombre]').forEach(tr => {
         const okTxt = tr.dataset.nombre.includes(buscar.value.toLowerCase());
         const okObj = !fObj.value || tr.dataset.objetivo === fObj.value;
         const okEst = !fEst.value || tr.dataset.estado === fEst.value;
@@ -1638,11 +1649,11 @@ function wireView(){
         tr.style.display = visible ? '' : 'none';
         if(visible){ visibleObjetivos.add(tr.dataset.objetivo); visibleProductos.add(tr.dataset.productoId); }
       });
-      document.querySelectorAll('#tablaProductos tbody tr.act-row').forEach(tr => {
+      document.querySelectorAll('#productosTablas tbody tr.act-row').forEach(tr => {
         tr.style.display = visibleProductos.has(tr.dataset.parentProducto) ? '' : 'none';
       });
-      document.querySelectorAll('#tablaProductos tbody tr.obj-group-header').forEach(tr => {
-        tr.style.display = visibleObjetivos.has(tr.dataset.objetivoHeader) ? '' : 'none';
+      document.querySelectorAll('#productosTablas .obj-tabla-block').forEach(div => {
+        div.style.display = visibleObjetivos.has(div.dataset.objetivoHeader) ? '' : 'none';
       });
     };
     buscar.addEventListener('input', applyProd); fObj.addEventListener('change', applyProd); fEst.addEventListener('change', applyProd);

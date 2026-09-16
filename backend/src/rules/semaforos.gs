@@ -47,28 +47,6 @@ function mesesProgramados_(estadosJson) {
 }
 
 /**
- * % de avance = promedio SOLO sobre los meses efectivamente programados (no sobre
- * todo el tramo mes_inicio–mes_fin, que puede tener huecos). Cada mes programado
- * suma 'realizado' (1), 'en_proceso' (0.5), o 'no_iniciado'/'atrasado' (0).
- * 'atrasado' no suma avance — es una marca visual para llamar la atención sobre
- * un mes programado y vencido sin ejecutar, distinta de 'no_iniciado' (aún no le
- * correspondía empezar). Compatibilidad: la clave antigua 'ejecutado' suma igual
- * que 'realizado'.
- */
-function calcularPctPorMeses_(estadosJson) {
-  const estados = parsearEstadosMensuales_(estadosJson);
-  const meses = Object.keys(estados);
-  if (!meses.length) return 0;
-  let suma = 0;
-  meses.forEach(function (m) {
-    const estado = estados[m];
-    if (estado === 'realizado' || estado === 'ejecutado') suma += 1;
-    else if (estado === 'en_proceso') suma += 0.5;
-  });
-  return Math.round((suma / meses.length) * 1000) / 10;
-}
-
-/**
  * Enriquece un producto crudo con pct_esperado, color y estado calculados.
  * Si el producto tiene actividades propias, su rango de meses y su % real
  * se DERIVAN de ellas (consolidado): mes_inicio/mes_fin = min/max de las
@@ -77,7 +55,16 @@ function calcularPctPorMeses_(estadosJson) {
  * actividades (como pasó con "Canasta educativa": 25% guardado vs. 52.2%
  * real de sus 4 actividades). Sin actividades, el % se calcula según su
  * propio tipo_medicion: 'manual' (pct_real tal cual, default), 'meta'
- * (alcanzado/meta) o 'mensual' (estados marcados mes a mes).
+ * (alcanzado/meta) o 'mensual'.
+ *
+ * 'mensual' usa `estados_mensuales` SOLO para el rango de meses programados
+ * (Cronograma: qué meses aplican, con huecos si es el caso) — el % de avance
+ * real NO se deriva de marcar celdas como "realizado" ahí, sino que es
+ * `pct_real` tal cual, un número reportado directamente (p. ej. desde el
+ * informe oficial de cumplimiento). Así el avance general y de cada producto
+ * queda consistente con lo reportado, y el Cronograma queda libre para
+ * usarse solo como calendario/bitácora sin que un clic cambie el % mostrado
+ * en Productos o en el dashboard.
  */
 function computarProducto_(producto, mesActual, actividadesDelProducto) {
   let mesInicio = Number(producto.mes_inicio);
@@ -91,7 +78,7 @@ function computarProducto_(producto, mesActual, actividadesDelProducto) {
   } else if (tipoMedicion === 'mensual') {
     const programados = mesesProgramados_(producto.estados_mensuales);
     if (programados.length) { mesInicio = programados[0]; mesFin = programados[programados.length - 1]; }
-    pctReal = calcularPctPorMeses_(producto.estados_mensuales);
+    pctReal = Number(producto.pct_real) || 0;
   } else {
     pctReal = Number(producto.pct_real) || 0;
   }
@@ -143,7 +130,10 @@ function computarProductos_(productos, mesActual, actividades) {
  *     "17 de 191 estudiantes").
  *   - 'simple' (sí/no): completada=true/false para actividades que no tienen
  *     una cantidad de por medio (p. ej. "Diseñar el protocolo"). % = 100 o 0.
- *   - 'mensual': estados marcados mes a mes (igual que en productos).
+ *   - 'mensual': `estados_mensuales` define solo el rango de meses programados
+ *     (Cronograma, con huecos si aplica); el % de avance es `pct_real` tal
+ *     cual, reportado directamente (igual razón que en computarProducto_:
+ *     el Cronograma es calendario, no la fuente del %).
  * Esta distinción le importa sobre todo a quien carga datos en el panel
  * admin; en las vistas públicas todas se ven igual (barra + estado).
  */
@@ -159,7 +149,7 @@ function computarActividad_(actividad, mesActual) {
   } else if (tipoMedicion === 'mensual') {
     const programados = mesesProgramados_(actividad.estados_mensuales);
     if (programados.length) { mesInicio = programados[0]; mesFin = programados[programados.length - 1]; }
-    pctAvance = calcularPctPorMeses_(actividad.estados_mensuales);
+    pctAvance = Number(actividad.pct_real) || 0;
   } else {
     pctAvance = actividad.completada === true ? 100 : 0;
   }

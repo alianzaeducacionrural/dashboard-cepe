@@ -10,8 +10,11 @@ const DashboardService = {
     const totalEjecutado = finanzas.por_objetivo.reduce((s, f) => s + Number(f.ejecutado || 0), 0);
     const avanceFinanciero = totalPresupuestado ? (totalEjecutado / totalPresupuestado) * 100 : 0;
 
-    const avanceTecnico = totalPresupuestado
-      ? objetivos.reduce((s, o) => s + o.avance_actual * (Number(o.presupuestado || 0) / totalPresupuestado), 0)
+    // Promedio simple entre objetivos (no ponderado por presupuesto): cada objetivo
+    // específico pesa lo mismo en el avance técnico general, sin importar cuánto
+    // dinero tenga asignado.
+    const avanceTecnico = objetivos.length
+      ? objetivos.reduce((s, o) => s + o.avance_actual, 0) / objetivos.length
       : 0;
 
     const conteoSemaforo = { verde: 0, amarillo: 0, rojo: 0, gris: 0, azul: 0 };
