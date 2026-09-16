@@ -185,6 +185,8 @@
   .mes-btn{border:1px solid var(--border); border-radius:var(--radius-sm); padding:6px 11px; font-size:11px; font-weight:700; cursor:pointer; font-family:var(--font-body); transition:filter .15s;}
   .mes-btn:hover{filter:brightness(0.95);}
   [data-theme="dark"] .mes-btn:hover{filter:brightness(1.15);}
+  .mes-btn-vacio{background:transparent; border:1px dashed var(--border-strong); color:var(--text-muted); opacity:.6;}
+  .mes-btn-vacio:hover{opacity:1; border-color:var(--tierra); color:var(--tierra); filter:none;}
   .admin-subnav{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;}
   .admin-subnav button{
     background:var(--card); border:1px solid var(--border); color:var(--text-muted); padding:8px 14px;
@@ -459,17 +461,24 @@ function openFormModal({ title, context, fields, rebuild, okLabel }){
         return `<div class="field"><label class="field-label">${esc(f.label)}</label><textarea id="ff_${f.key}">${esc(currentValues[f.key] ?? '')}</textarea></div>`;
       }
       if(f.type === 'meses'){
+        // No se asume un rango corrido: se recorren los 9 meses del proyecto y cada
+        // uno se pinta como "programado" (botón de color, cicla estado) o "no
+        // programado" (botón punteado, lo agrega) — así el propio grid puede
+        // representar huecos (p. ej. programado en 2,4,5 pero no en 3).
         const estados = (currentValues[f.key] && typeof currentValues[f.key] === 'object') ? currentValues[f.key] : {};
-        const meses = [];
-        for(let m = f.mesInicio; m <= f.mesFin; m++) meses.push(m);
         return `<div class="field"><label class="field-label">${esc(f.label)}</label>
           <div class="meses-grid" id="ff_${f.key}">
-            ${meses.map(m => {
-              const estado = estados[m] || estados[String(m)] || 'no_iniciado';
-              return `<button type="button" class="mes-btn" data-mes="${m}" style="background:${COLOR_MES_BG[estado]}; color:${COLOR_MES_FG[estado]};">${esc(CONFIG.meses[m-1])}</button>`;
+            ${CONFIG.meses.map((nombreMes,i) => {
+              const m = i+1;
+              const programado = (m in estados) || (String(m) in estados);
+              if(!programado){
+                return `<button type="button" class="mes-btn mes-btn-vacio" data-mes="${m}" data-accion="agregar">${esc(nombreMes)}</button>`;
+              }
+              const estado = estados[m] || estados[String(m)];
+              return `<button type="button" class="mes-btn" data-mes="${m}" data-accion="ciclar" style="background:${COLOR_MES_BG[estado]}; color:${COLOR_MES_FG[estado]};">${esc(nombreMes)}</button>`;
             }).join('')}
           </div>
-          <div class="muted" style="font-size:10.5px; margin-top:5px;">Clic en un mes para ciclar: no iniciado → en proceso → atrasado → realizado.</div>
+          <div class="muted" style="font-size:10.5px; margin-top:5px;">Clic en un mes sin programar lo agrega; clic en uno programado cicla: no iniciado → en proceso → atrasado → realizado (un cuarto clic lo quita).</div>
         </div>`;
       }
       return `<div class="field"><label class="field-label">${esc(f.label)}</label><input type="${f.type || 'text'}" id="ff_${f.key}" value="${esc(currentValues[f.key] ?? '')}"></div>`;
@@ -494,8 +503,13 @@ function openFormModal({ title, context, fields, rebuild, okLabel }){
             btn.addEventListener('click', () => {
               const mes = Number(btn.dataset.mes);
               const estados = (currentValues[f.key] && typeof currentValues[f.key] === 'object') ? currentValues[f.key] : {};
-              const actual = estados[mes] || estados[String(mes)] || 'no_iniciado';
-              estados[mes] = CICLO_MES[actual];
+              if(btn.dataset.accion === 'agregar'){
+                estados[mes] = 'no_iniciado';
+              } else {
+                const actual = estados[mes] || estados[String(mes)] || 'no_iniciado';
+                if(actual === 'realizado'){ delete estados[mes]; delete estados[String(mes)]; } // 4to clic: lo quita
+                else estados[mes] = CICLO_MES[actual];
+              }
               currentValues[f.key] = estados;
               renderBody();
             });
@@ -829,9 +843,14 @@ function viewCronograma(){
   const ganttBar = (item, tipo, pct, small, editable) => {
     const mesInicio = item.mes_inicio, mesFin = item.mes_fin;
     const esMensual = item.tipo_medicion === 'mensual';
+    const estadosItem = item.estados_mensuales || {};
     return CONFIG.meses.map((m,i)=>{
       const mes = i+1;
-      const activo = mes>=mesInicio && mes<=mesFin;
+      // Un ítem 'mensual' no asume meses corridos: un mes está "activo" solo si
+      // tiene una clave explícita en estados_mensuales (puede haber huecos, p. ej.
+      // programado en 2,4,5 pero no en 3). Los tipos manual/meta/simple sí usan
+      // el rango mes_inicio–mes_fin como una barra continua (no soportan huecos).
+      const activo = esMensual ? (mes in estadosItem || String(mes) in estadosItem) : (mes>=mesInicio && mes<=mesFin);
       if(ADMIN_MODE && editable){
         if(!activo){
           return `<td class="cell"><button type="button" class="mes-cell-btn mes-cell-vacia" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: gestionar" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})">${icon('plus',{size:10})}</button></td>`;
@@ -871,7 +890,7 @@ function viewCronograma(){
         <span style="width:12px; height:12px; border-radius:4px; background:${COLOR_MES_SOLID[e]}; flex-shrink:0;"></span>${ESTADO_MES_LABEL[e]}
       </span>`).join('')}
     <span style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-muted);">
-      <span style="width:12px; height:12px; border-radius:4px; border:1px dashed var(--border-strong); flex-shrink:0;"></span>Fuera de rango
+      <span style="width:12px; height:12px; border-radius:4px; border:1px dashed var(--border-strong); flex-shrink:0;"></span>No programado
     </span>
   </div>
   <div class="gantt">
@@ -889,13 +908,6 @@ function viewCronograma(){
  * real del Sheet y un toast avisa qué pasó — así no hay que esperar un viaje de
  * red completo para ver el clic reflejado.
  */
-/** Solo puede quitar el primer o el último mes del rango (un rango de meses no puede tener huecos). */
-function quitarMesDelRango_(item, mes){
-  if(item.mes_inicio === item.mes_fin) return null;
-  if(mes === item.mes_inicio) return { mes_inicio: item.mes_inicio + 1 };
-  if(mes === item.mes_fin) return { mes_fin: item.mes_fin - 1 };
-  return null;
-}
 /** Aplica el cambio de inmediato en DATA + repinta (optimista), y guarda en segundo plano. */
 async function guardarCambiosMes_(tipo, id, cambiosLocal, cambiosApi){
   const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
@@ -920,14 +932,21 @@ const ESTADO_MES_OPCIONES = [
  * lugar en vez de acciones sueltas por celda. Si el ítem no era de medición
  * 'mensual', se convierte automáticamente al guardar un estado real (no al
  * dejarlo "fuera de rango"), para no gestionar mes a mes algo que no aplica.
+ *
+ * No se asume que los meses programados sean corridos: un producto puede estar
+ * programado en, por ejemplo, los meses 2, 4, 5 y 6 sin el 3 (así es el plan de
+ * trabajo real para varios productos). Por eso "programado" se define por si el
+ * mes tiene una clave propia en estados_mensuales, y agregar/quitar un mes solo
+ * toca esa clave puntual — nunca extiende ni recorta un rango contiguo asumido.
  */
 async function abrirGestionMes(tipo, id, mes){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
   const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
   const item = lista.find(x=>x.id===id);
-  const enRango = mes >= item.mes_inicio && mes <= item.mes_fin;
+  const esMensual = item.tipo_medicion === 'mensual';
   const estadosActuales = item.estados_mensuales || {};
-  const valorActual = enRango ? (estadosActuales[mes] || estadosActuales[String(mes)] || 'no_iniciado') : 'fuera_rango';
+  const programado = esMensual ? (mes in estadosActuales || String(mes) in estadosActuales) : (mes >= item.mes_inicio && mes <= item.mes_fin);
+  const valorActual = programado ? (esMensual ? (estadosActuales[mes] || estadosActuales[String(mes)] || 'no_iniciado') : 'no_iniciado') : 'fuera_rango';
 
   const respuesta = await openFormModal({
     title: item.nombre,
@@ -937,21 +956,19 @@ async function abrirGestionMes(tipo, id, mes){
   if(!respuesta) return;
 
   if(respuesta.estado === 'fuera_rango'){
-    if(!enRango) return;
-    const cambiosRango = quitarMesDelRango_(item, mes);
-    if(!cambiosRango){ toast(item.mes_inicio === item.mes_fin ? 'Ya tiene un solo mes programado. Si ya no aplica, elimínalo desde Panel admin.' : 'Solo puedes quitar el primer o el último mes programado.'); return; }
-    return guardarCambiosMes_(tipo, id, cambiosRango, cambiosRango);
+    if(!programado) return;
+    // Quitar solo borra la clave de este mes puntual — el resto del calendario no se toca.
+    const nuevosEstados = Object.assign({}, estadosActuales);
+    delete nuevosEstados[mes]; delete nuevosEstados[String(mes)];
+    if(!Object.keys(nuevosEstados).length){ toast('Este era el único mes programado. Si ya no aplica, elimínalo desde Panel admin.'); return; }
+    return guardarCambiosMes_(tipo, id, { estados_mensuales: nuevosEstados }, { estados_mensuales: JSON.stringify(nuevosEstados) });
   }
 
+  // Agregar/cambiar solo toca la clave de este mes puntual — no se rellenan los meses intermedios.
   const nuevosEstados = Object.assign({}, estadosActuales, { [mes]: respuesta.estado });
   const cambiosLocal = { estados_mensuales: nuevosEstados };
   const cambiosApi = { estados_mensuales: JSON.stringify(nuevosEstados) };
-  if(item.tipo_medicion !== 'mensual'){ cambiosLocal.tipo_medicion = 'mensual'; cambiosApi.tipo_medicion = 'mensual'; }
-  if(!enRango){
-    const nuevoInicio = Math.min(item.mes_inicio, mes), nuevoFin = Math.max(item.mes_fin, mes);
-    cambiosLocal.mes_inicio = nuevoInicio; cambiosLocal.mes_fin = nuevoFin;
-    cambiosApi.mes_inicio = nuevoInicio; cambiosApi.mes_fin = nuevoFin;
-  }
+  if(!esMensual){ cambiosLocal.tipo_medicion = 'mensual'; cambiosApi.tipo_medicion = 'mensual'; }
   return guardarCambiosMes_(tipo, id, cambiosLocal, cambiosApi);
 }
 window.abrirGestionMes = abrirGestionMes;
@@ -1364,14 +1381,14 @@ function camposMedicionProducto(p){
   const tipo = p.tipo_medicion || 'manual';
   const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['manual','meta','mensual'], value:tipo, reactive:true };
   if(tipo === 'meta') return [sel, { key:'meta', label:'Meta', type:'number', value:p.meta || 0 }, { key:'alcanzado', label:'Alcanzado', type:'number', value:p.alcanzado || 0 }];
-  if(tipo === 'mensual') return [sel, { key:'estados_mensuales', label:'Estado por mes', type:'meses', mesInicio:Number(p.mes_inicio)||1, mesFin:Number(p.mes_fin)||9, value:(p.estados_mensuales && typeof p.estados_mensuales==='object') ? p.estados_mensuales : {} }];
+  if(tipo === 'mensual') return [sel, { key:'estados_mensuales', label:'Estado por mes', type:'meses', value:(p.estados_mensuales && typeof p.estados_mensuales==='object') ? p.estados_mensuales : {} }];
   return [sel, { key:'pct_real', label:'% de avance', type:'number', value:p.pct_real || 0 }];
 }
 function camposMedicionActividad(a){
   const tipo = a.tipo_medicion || 'simple';
   const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['simple','meta','mensual'], value:tipo, reactive:true };
   if(tipo === 'meta') return [sel, { key:'meta', label:'Meta', type:'number', value:a.meta || 0 }, { key:'alcanzado', label:'Alcanzado', type:'number', value:a.alcanzado || 0 }];
-  if(tipo === 'mensual') return [sel, { key:'estados_mensuales', label:'Estado por mes', type:'meses', mesInicio:Number(a.mes_inicio)||1, mesFin:Number(a.mes_fin)||9, value:(a.estados_mensuales && typeof a.estados_mensuales==='object') ? a.estados_mensuales : {} }];
+  if(tipo === 'mensual') return [sel, { key:'estados_mensuales', label:'Estado por mes', type:'meses', value:(a.estados_mensuales && typeof a.estados_mensuales==='object') ? a.estados_mensuales : {} }];
   return [sel, { key:'completada', label:'Marcar como completada', type:'checkbox', value:!!a.completada }];
 }
 

@@ -30,32 +30,42 @@ const ESTADO_POR_COLOR = {
 };
 
 /**
- * % de avance a partir de estados mensuales marcados a mano (admin), uno de:
- * 'realizado' (1), 'en_proceso' (0.5), o 'no_iniciado'/'atrasado'/ausente (0),
- * por cada mes dentro de [mesInicio, mesFin]. 'atrasado' no suma avance — es una
- * marca visual para llamar la atención sobre un mes vencido sin ejecutar,
- * distinta de 'no_iniciado' (aún no le correspondía empezar). `estadosJson` es
- * el JSON string guardado en la columna estados_mensuales (p. ej.
- * {"3":"realizado","4":"atrasado"}). Compatibilidad: la clave antigua
- * 'ejecutado' sigue sumando igual que 'realizado', y 'no_ejecutado' igual que
- * 'no_iniciado' (ausente).
+ * No todas las actividades se ejecutan en meses corridos — el plan de trabajo real
+ * tiene productos programados por ejemplo en los meses 2,4,5,6,7,8,9 (sin el mes 3).
+ * Por eso `estados_mensuales` es la única fuente de verdad de QUÉ meses están
+ * programados (cada clave presente = programado; un mes sin clave = no programado,
+ * así esté "en medio" de otros meses sí programados) — nunca se asume que todo el
+ * tramo entre el primer y el último mes programado está activo.
  */
-function calcularPctPorMeses_(estadosJson, mesInicio, mesFin) {
-  let estados = {};
-  try { estados = estadosJson ? JSON.parse(estadosJson) : {}; } catch (e) { estados = {}; }
-  const total = mesFin - mesInicio + 1;
-  if (total <= 0) return 0;
-  let suma = 0;
-  for (let m = mesInicio; m <= mesFin; m++) {
-    const estado = estados[m] || estados[String(m)];
-    if (estado === 'realizado' || estado === 'ejecutado') suma += 1;
-    else if (estado === 'en_proceso') suma += 0.5;
-  }
-  return Math.round((suma / total) * 1000) / 10;
-}
-
 function parsearEstadosMensuales_(estadosJson) {
   try { return estadosJson ? JSON.parse(estadosJson) : {}; } catch (e) { return {}; }
+}
+
+/** Meses programados (claves de estados_mensuales), como números y ordenados. */
+function mesesProgramados_(estadosJson) {
+  return Object.keys(parsearEstadosMensuales_(estadosJson)).map(Number).sort(function (a, b) { return a - b; });
+}
+
+/**
+ * % de avance = promedio SOLO sobre los meses efectivamente programados (no sobre
+ * todo el tramo mes_inicio–mes_fin, que puede tener huecos). Cada mes programado
+ * suma 'realizado' (1), 'en_proceso' (0.5), o 'no_iniciado'/'atrasado' (0).
+ * 'atrasado' no suma avance — es una marca visual para llamar la atención sobre
+ * un mes programado y vencido sin ejecutar, distinta de 'no_iniciado' (aún no le
+ * correspondía empezar). Compatibilidad: la clave antigua 'ejecutado' suma igual
+ * que 'realizado'.
+ */
+function calcularPctPorMeses_(estadosJson) {
+  const estados = parsearEstadosMensuales_(estadosJson);
+  const meses = Object.keys(estados);
+  if (!meses.length) return 0;
+  let suma = 0;
+  meses.forEach(function (m) {
+    const estado = estados[m];
+    if (estado === 'realizado' || estado === 'ejecutado') suma += 1;
+    else if (estado === 'en_proceso') suma += 0.5;
+  });
+  return Math.round((suma / meses.length) * 1000) / 10;
 }
 
 /**
@@ -79,7 +89,9 @@ function computarProducto_(producto, mesActual, actividadesDelProducto) {
     const alcanzado = Number(producto.alcanzado) || 0;
     pctReal = meta > 0 ? Math.round((alcanzado / meta) * 1000) / 10 : 0;
   } else if (tipoMedicion === 'mensual') {
-    pctReal = calcularPctPorMeses_(producto.estados_mensuales, mesInicio, mesFin);
+    const programados = mesesProgramados_(producto.estados_mensuales);
+    if (programados.length) { mesInicio = programados[0]; mesFin = programados[programados.length - 1]; }
+    pctReal = calcularPctPorMeses_(producto.estados_mensuales);
   } else {
     pctReal = Number(producto.pct_real) || 0;
   }
@@ -136,8 +148,8 @@ function computarProductos_(productos, mesActual, actividades) {
  * admin; en las vistas públicas todas se ven igual (barra + estado).
  */
 function computarActividad_(actividad, mesActual) {
-  const mesInicio = Number(actividad.mes_inicio) || 1;
-  const mesFin = Number(actividad.mes_fin) || mesInicio;
+  let mesInicio = Number(actividad.mes_inicio) || 1;
+  let mesFin = Number(actividad.mes_fin) || mesInicio;
   const meta = Number(actividad.meta) || 0;
   const alcanzado = Number(actividad.alcanzado) || 0;
   const tipoMedicion = actividad.tipo_medicion || (meta > 0 ? 'meta' : 'simple');
@@ -145,7 +157,9 @@ function computarActividad_(actividad, mesActual) {
   if (tipoMedicion === 'meta') {
     pctAvance = meta > 0 ? Math.round((alcanzado / meta) * 1000) / 10 : 0;
   } else if (tipoMedicion === 'mensual') {
-    pctAvance = calcularPctPorMeses_(actividad.estados_mensuales, mesInicio, mesFin);
+    const programados = mesesProgramados_(actividad.estados_mensuales);
+    if (programados.length) { mesInicio = programados[0]; mesFin = programados[programados.length - 1]; }
+    pctAvance = calcularPctPorMeses_(actividad.estados_mensuales);
   } else {
     pctAvance = actividad.completada === true ? 100 : 0;
   }
