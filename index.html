@@ -876,12 +876,50 @@ function viewCronograma(){
       return `<td class="cell"><div class="bar" style="background:${colorHex(item.color)}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)}: ${pct}%"></div></td>`;
     }).join('');
   };
+  // Estado de un ítem (producto o actividad) en un mes puntual, en el vocabulario
+  // de 4 estados (no_iniciado/en_proceso/atrasado/realizado) — null si ese mes no
+  // le aplica. Los ítems 'mensual' ya usan ese vocabulario directamente; los demás
+  // (manual/meta/simple) traducen su semáforo general (verde/amarillo/rojo/gris/azul)
+  // al mismo vocabulario para poder mezclarlos.
+  const estadoMesDeItem_ = (item, mes) => {
+    if(item.tipo_medicion === 'mensual'){
+      const estados = item.estados_mensuales || {};
+      if(!(mes in estados) && !(String(mes) in estados)) return null;
+      return estados[mes] || estados[String(mes)] || 'no_iniciado';
+    }
+    if(mes < item.mes_inicio || mes > item.mes_fin) return null;
+    return ({ verde:'realizado', amarillo:'en_proceso', rojo:'atrasado', gris:'no_iniciado', azul:'realizado' })[item.color] || 'no_iniciado';
+  };
+  // Un producto con actividades no tiene avance propio (se deriva de ellas), así que
+  // su celda de cada mes también se deriva: el estado que más actividades compartan
+  // ese mes gana; en empate, el más urgente decide (atrasado > no_iniciado > en_proceso
+  // > realizado) para no ocultar un pendiente detrás de uno ya resuelto.
+  const PRIORIDAD_URGENCIA = { atrasado:0, no_iniciado:1, en_proceso:2, realizado:3 };
+  const estadoConsolidadoMes_ = (actividadesDelProducto, mes) => {
+    const estados = actividadesDelProducto.map(a => estadoMesDeItem_(a, mes)).filter(Boolean);
+    if(!estados.length) return null;
+    const conteo = {};
+    estados.forEach(e => { conteo[e] = (conteo[e]||0) + 1; });
+    let mejor = null;
+    Object.keys(conteo).forEach(e => {
+      if(!mejor || conteo[e] > conteo[mejor] || (conteo[e] === conteo[mejor] && PRIORIDAD_URGENCIA[e] < PRIORIDAD_URGENCIA[mejor])) mejor = e;
+    });
+    return mejor;
+  };
+  const ganttBarConsolidado = (producto, actividadesDelProducto) => CONFIG.meses.map((m,i) => {
+    const mes = i+1;
+    const estado = estadoConsolidadoMes_(actividadesDelProducto, mes);
+    if(!estado) return `<td class="cell"></td>`;
+    return `<td class="cell"><div class="bar" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(producto.nombre)} - ${CONFIG.meses[mes-1]}: ${ESTADO_MES_LABEL[estado]} (según sus actividades)"></div></td>`;
+  }).join('');
   objetivos.forEach(o => {
     filas.push(`<tr class="obj-group-header"><td colspan="${colspanMeses + 1}">${esc(o.nombre)}</td></tr>`);
     DATA.productos.filter(p => p.objetivo_id === o.id).forEach(p => {
-      const tieneActividades = DATA.actividades.some(a=>a.producto_id===p.id);
-      filas.push(`<tr><td style="padding:8px 10px; font-size:12px; font-weight:600;">${esc(p.nombre)}</td>${ganttBar(p, 'producto', p.pct_real, false, !tieneActividades)}</tr>`);
-      DATA.actividades.filter(a => a.producto_id === p.id).forEach(a => {
+      const actividadesDelProducto = DATA.actividades.filter(a=>a.producto_id===p.id);
+      const tieneActividades = actividadesDelProducto.length > 0;
+      const barraProducto = tieneActividades ? ganttBarConsolidado(p, actividadesDelProducto) : ganttBar(p, 'producto', p.pct_real, false, true);
+      filas.push(`<tr><td style="padding:8px 10px; font-size:12px; font-weight:600;">${esc(p.nombre)}</td>${barraProducto}</tr>`);
+      actividadesDelProducto.forEach(a => {
         filas.push(`<tr><td style="padding:5px 10px 5px 26px; font-size:11px; color:var(--text-muted);">↳ ${esc(a.nombre)}</td>${ganttBar(a, 'actividad', a.pct_avance, true, true)}</tr>`);
       });
     });
