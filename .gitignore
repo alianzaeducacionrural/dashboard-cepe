@@ -3,5 +3,9 @@
 # muestra el dashboard; no se suben a un repositorio público.
 /docs/
 
+# Reportes de avance mensuales, incluye el listado de estudiantes con datos
+# personales (nombres, cédulas, teléfonos, acudientes) — nunca a un repo público.
+/avances/
+
 node_modules/
 .DS_Store

@@ -30,10 +30,15 @@ const ESTADO_POR_COLOR = {
 };
 
 /**
- * % de avance a partir de estados mensuales marcados a mano (admin), uno de
- * 'ejecutado' (1), 'en_proceso' (0.5) o 'no_ejecutado'/ausente (0), por cada
- * mes dentro de [mesInicio, mesFin]. `estadosJson` es el JSON string guardado
- * en la columna estados_mensuales (p. ej. {"3":"ejecutado","4":"en_proceso"}).
+ * % de avance a partir de estados mensuales marcados a mano (admin), uno de:
+ * 'realizado' (1), 'en_proceso' (0.5), o 'no_iniciado'/'atrasado'/ausente (0),
+ * por cada mes dentro de [mesInicio, mesFin]. 'atrasado' no suma avance — es una
+ * marca visual para llamar la atención sobre un mes vencido sin ejecutar,
+ * distinta de 'no_iniciado' (aún no le correspondía empezar). `estadosJson` es
+ * el JSON string guardado en la columna estados_mensuales (p. ej.
+ * {"3":"realizado","4":"atrasado"}). Compatibilidad: la clave antigua
+ * 'ejecutado' sigue sumando igual que 'realizado', y 'no_ejecutado' igual que
+ * 'no_iniciado' (ausente).
  */
 function calcularPctPorMeses_(estadosJson, mesInicio, mesFin) {
   let estados = {};
@@ -43,7 +48,7 @@ function calcularPctPorMeses_(estadosJson, mesInicio, mesFin) {
   let suma = 0;
   for (let m = mesInicio; m <= mesFin; m++) {
     const estado = estados[m] || estados[String(m)];
-    if (estado === 'ejecutado') suma += 1;
+    if (estado === 'realizado' || estado === 'ejecutado') suma += 1;
     else if (estado === 'en_proceso') suma += 0.5;
   }
   return Math.round((suma / total) * 1000) / 10;

@@ -418,9 +418,11 @@ function toast(msg){
   clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
-const CICLO_MES = { no_ejecutado: 'en_proceso', en_proceso: 'ejecutado', ejecutado: 'no_ejecutado' };
-const COLOR_MES_BG = { no_ejecutado: 'var(--gris-sem-suave)', en_proceso: 'var(--amarillo-sem-suave)', ejecutado: 'var(--verde-suave)' };
-const COLOR_MES_FG = { no_ejecutado: 'var(--gris-sem)', en_proceso: 'var(--amarillo-sem)', ejecutado: 'var(--verde)' };
+// 4 estados posibles para un mes: no iniciado (gris) -> en proceso (amarillo) -> atrasado (rojo) -> realizado (verde).
+const CICLO_MES = { no_iniciado: 'en_proceso', en_proceso: 'atrasado', atrasado: 'realizado', realizado: 'no_iniciado' };
+const ESTADO_MES_LABEL = { no_iniciado: 'No iniciado', en_proceso: 'En proceso', atrasado: 'Atrasado', realizado: 'Realizado' };
+const COLOR_MES_BG = { no_iniciado: 'var(--gris-sem-suave)', en_proceso: 'var(--amarillo-sem-suave)', atrasado: 'var(--rojo-suave)', realizado: 'var(--verde-suave)' };
+const COLOR_MES_FG = { no_iniciado: 'var(--gris-sem)', en_proceso: 'var(--amarillo-sem)', atrasado: 'var(--rojo)', realizado: 'var(--verde)' };
 
 /**
  * Modal de edición genérico: reemplaza prompt()/confirm() por un formulario propio.
@@ -429,7 +431,7 @@ const COLOR_MES_FG = { no_ejecutado: 'var(--gris-sem)', en_proceso: 'var(--amari
  *   devolver un nuevo arreglo de fields; el modal se vuelve a pintar sin cerrarse (para que
  *   formularios como el de producto muestren campos distintos según tipo_medicion elegido).
  * - El tipo 'meses' pinta un botón por mes (entre f.mesInicio y f.mesFin) que cicla
- *   no_ejecutado -> en_proceso -> ejecutado al hacer clic; el valor final se guarda como JSON string.
+ *   no iniciado -> en proceso -> atrasado -> realizado al hacer clic; el valor final se guarda como JSON string.
  * Devuelve un objeto {key: valor} al guardar, o null si se cancela.
  */
 function openFormModal({ title, context, fields, rebuild, okLabel }){
@@ -463,11 +465,11 @@ function openFormModal({ title, context, fields, rebuild, okLabel }){
         return `<div class="field"><label class="field-label">${esc(f.label)}</label>
           <div class="meses-grid" id="ff_${f.key}">
             ${meses.map(m => {
-              const estado = estados[m] || estados[String(m)] || 'no_ejecutado';
+              const estado = estados[m] || estados[String(m)] || 'no_iniciado';
               return `<button type="button" class="mes-btn" data-mes="${m}" style="background:${COLOR_MES_BG[estado]}; color:${COLOR_MES_FG[estado]};">${esc(CONFIG.meses[m-1])}</button>`;
             }).join('')}
           </div>
-          <div class="muted" style="font-size:10.5px; margin-top:5px;">Clic en un mes para ciclar: no ejecutado → en proceso → ejecutado.</div>
+          <div class="muted" style="font-size:10.5px; margin-top:5px;">Clic en un mes para ciclar: no iniciado → en proceso → atrasado → realizado.</div>
         </div>`;
       }
       return `<div class="field"><label class="field-label">${esc(f.label)}</label><input type="${f.type || 'text'}" id="ff_${f.key}" value="${esc(currentValues[f.key] ?? '')}"></div>`;
@@ -492,7 +494,7 @@ function openFormModal({ title, context, fields, rebuild, okLabel }){
             btn.addEventListener('click', () => {
               const mes = Number(btn.dataset.mes);
               const estados = (currentValues[f.key] && typeof currentValues[f.key] === 'object') ? currentValues[f.key] : {};
-              const actual = estados[mes] || estados[String(mes)] || 'no_ejecutado';
+              const actual = estados[mes] || estados[String(mes)] || 'no_iniciado';
               estados[mes] = CICLO_MES[actual];
               currentValues[f.key] = estados;
               renderBody();
@@ -819,7 +821,7 @@ function filaActividad(a, prodId){
 }
 
 /* ===================== CRONOGRAMA ===================== */
-const COLOR_MES_SOLID = { no_ejecutado: 'var(--gris-sem)', en_proceso: 'var(--amarillo-sem)', ejecutado: 'var(--verde)' };
+const COLOR_MES_SOLID = { no_iniciado: 'var(--gris-sem)', en_proceso: 'var(--amarillo-sem)', atrasado: 'var(--rojo)', realizado: 'var(--verde)' };
 function viewCronograma(){
   const objetivos = DATA.objetivos;
   const colspanMeses = CONFIG.meses.length;
@@ -836,16 +838,16 @@ function viewCronograma(){
         }
         if(esMensual){
           const estados = item.estados_mensuales || {};
-          const estado = estados[mes] || estados[String(mes)] || 'no_ejecutado';
-          return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${estado.replace('_',' ')} (clic para gestionar)" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})"></button></td>`;
+          const estado = estados[mes] || estados[String(mes)] || 'no_iniciado';
+          return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${ESTADO_MES_LABEL[estado]||estado} (clic para gestionar)" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})"></button></td>`;
         }
         return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${colorHex(item.color)};" title="${esc(item.nombre)}: ${pct}% — clic para gestionar este mes" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})"></button></td>`;
       }
       if(!activo) return `<td class="cell"></td>`;
       if(esMensual){
         const estados = item.estados_mensuales || {};
-        const estado = estados[mes] || estados[String(mes)] || 'no_ejecutado';
-        return `<td class="cell"><div class="bar" style="background:${COLOR_MES_SOLID[estado]}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${estado.replace('_',' ')}"></div></td>`;
+        const estado = estados[mes] || estados[String(mes)] || 'no_iniciado';
+        return `<td class="cell"><div class="bar" style="background:${COLOR_MES_SOLID[estado]}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${ESTADO_MES_LABEL[estado]||estado}"></div></td>`;
       }
       return `<td class="cell"><div class="bar" style="background:${colorHex(item.color)}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)}: ${pct}%"></div></td>`;
     }).join('');
@@ -863,6 +865,15 @@ function viewCronograma(){
   return `
   <div class="section-title">${icon('calendar',{size:20,color:'var(--tierra)'})}Cronograma (marzo – noviembre 2026)</div>
   <p class="muted" style="font-size:12.5px;">Agrupado por objetivo. Cada producto muestra sus actividades (cuando existen) como sub-filas, cada una con su propio rango de meses y estado.${ADMIN_MODE?' Clic en cualquier celda abre una ventana para gestionar ese mes: programarlo, cambiar su estado o quitarlo.':''}</p>
+  <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:14px; padding:10px 14px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm);">
+    ${['no_iniciado','en_proceso','atrasado','realizado'].map(e=>`
+      <span style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-muted);">
+        <span style="width:12px; height:12px; border-radius:4px; background:${COLOR_MES_SOLID[e]}; flex-shrink:0;"></span>${ESTADO_MES_LABEL[e]}
+      </span>`).join('')}
+    <span style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-muted);">
+      <span style="width:12px; height:12px; border-radius:4px; border:1px dashed var(--border-strong); flex-shrink:0;"></span>Fuera de rango
+    </span>
+  </div>
   <div class="gantt">
     <table>
       <thead><tr><th style="min-width:240px;">Producto / actividad</th>${CONFIG.meses.map((m,i)=>`<th class="month">${m}</th>`).join('')}</tr></thead>
@@ -898,9 +909,10 @@ async function guardarCambiosMes_(tipo, id, cambiosLocal, cambiosApi){
 }
 const ESTADO_MES_OPCIONES = [
   { value:'fuera_rango', label:'No programado (fuera del rango)' },
-  { value:'no_ejecutado', label:'Programado — no ejecutado' },
-  { value:'en_proceso', label:'Programado — en proceso' },
-  { value:'ejecutado', label:'Programado — ejecutado' },
+  { value:'no_iniciado', label:'No iniciado' },
+  { value:'en_proceso', label:'En proceso' },
+  { value:'atrasado', label:'Atrasado' },
+  { value:'realizado', label:'Realizado' },
 ];
 /**
  * Modal único para gestionar un mes de un producto/actividad desde el Cronograma
@@ -915,7 +927,7 @@ async function abrirGestionMes(tipo, id, mes){
   const item = lista.find(x=>x.id===id);
   const enRango = mes >= item.mes_inicio && mes <= item.mes_fin;
   const estadosActuales = item.estados_mensuales || {};
-  const valorActual = enRango ? (estadosActuales[mes] || estadosActuales[String(mes)] || 'no_ejecutado') : 'fuera_rango';
+  const valorActual = enRango ? (estadosActuales[mes] || estadosActuales[String(mes)] || 'no_iniciado') : 'fuera_rango';
 
   const respuesta = await openFormModal({
     title: item.nombre,
@@ -979,7 +991,7 @@ window.seleccionarMes = seleccionarMes;
 function filaMensual(item, tipo, mes, esHija, editable){
   const esMensual = item.tipo_medicion === 'mensual';
   const estados = item.estados_mensuales || {};
-  const estadoMes = estados[mes] || estados[String(mes)] || 'no_ejecutado';
+  const estadoMes = estados[mes] || estados[String(mes)] || 'no_iniciado';
   const pct = tipo === 'producto' ? item.pct_real : item.pct_avance;
   const accion = (ADMIN_MODE && editable)
     ? `<button class="btn" style="padding:5px 11px; font-size:11px; background:var(--tierra-suave); color:var(--tierra); border-color:transparent;" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})">${icon('refresh',{size:11})}Gestionar mes</button>`
@@ -993,7 +1005,7 @@ function filaMensual(item, tipo, mes, esHija, editable){
       </div>
     </div>
     <div style="display:flex; align-items:center; gap:8px;">
-      ${esMensual ? `<span style="background:${COLOR_MES_BG[estadoMes]}; color:${COLOR_MES_FG[estadoMes]}; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700;">${estadoMes.replace('_',' ')} este mes</span>` : ''}
+      ${esMensual ? `<span style="background:${COLOR_MES_BG[estadoMes]}; color:${COLOR_MES_FG[estadoMes]}; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700;">${ESTADO_MES_LABEL[estadoMes]||estadoMes} este mes</span>` : ''}
       ${accion}
     </div>
   </div>`;
@@ -1403,8 +1415,6 @@ async function abrirEdicionProductoAdmin(id){
   }
   const camposBase = (obj) => [
     { key:'nombre', label:'Nombre', type:'text', value:obj.nombre },
-    { key:'mes_inicio', label:'Mes inicio', type:'number', value:obj.mes_inicio },
-    { key:'mes_fin', label:'Mes fin', type:'number', value:obj.mes_fin },
     ...camposMedicionProducto(obj),
     { key:'responsable', label:'Responsable', type:'text', value:obj.responsable || '' },
     { key:'valor_ejecutado', label:'Valor ejecutado', type:'number', value:obj.valor_ejecutado || 0 },
@@ -1428,15 +1438,14 @@ async function crearProductoAdmin(){
   const base = (vals) => [
     { key:'objetivo_id', label:'Objetivo', type:'select', options:objetivoOptions, value: vals.objetivo_id || objetivoOptions[0].value },
     { key:'nombre', label:'Nombre', type:'text', value: vals.nombre || '' },
-    { key:'mes_inicio', label:'Mes inicio', type:'number', value: vals.mes_inicio ?? 1 },
-    { key:'mes_fin', label:'Mes fin', type:'number', value: vals.mes_fin ?? 1 },
-    ...camposMedicionProducto(Object.assign({ tipo_medicion:'manual', pct_real:0 }, vals)),
+    ...camposMedicionProducto(Object.assign({ tipo_medicion:'manual', pct_real:0 }, vals, { mes_inicio:1, mes_fin:1 })),
     { key:'responsable', label:'Responsable', type:'text', value: vals.responsable || 'Comité de Cafeteros de Caldas' },
     { key:'observaciones', label:'Observaciones', type:'textarea', value: vals.observaciones || '' },
   ];
   const cambios = await openFormModal({ title:'Nuevo producto', fields: base({}), rebuild: base });
   if(!cambios) return;
   if(!cambios.objetivo_id || !cambios.nombre){ toast('Objetivo y nombre son obligatorios.'); return; }
+  cambios.mes_inicio = 1; cambios.mes_fin = 1; // el rango de meses se programa después desde el Cronograma
   try{
     await apiPost(Object.assign({ action:'createProducto', token: TOKEN }, cambios));
     toast('Producto creado.');
@@ -1481,8 +1490,6 @@ async function abrirEdicionActividadAdmin(id){
   const a = DATA.actividades.find(x=>x.id===id);
   const camposBase = (obj) => [
     { key:'nombre', label:'Nombre', type:'text', value:obj.nombre },
-    { key:'mes_inicio', label:'Mes inicio', type:'number', value:obj.mes_inicio },
-    { key:'mes_fin', label:'Mes fin', type:'number', value:obj.mes_fin },
     ...camposMedicionActividad(obj),
     { key:'responsable', label:'Responsable', type:'text', value:obj.responsable || '' },
     { key:'evidencia', label:'Evidencia', type:'text', value:obj.evidencia || '' },
@@ -1504,15 +1511,14 @@ async function crearActividadAdmin(){
   const base = (vals) => [
     { key:'producto_id', label:'Producto', type:'select', options:productoOptions, value: vals.producto_id || productoOptions[0].value },
     { key:'nombre', label:'Nombre', type:'text', value: vals.nombre || '' },
-    { key:'mes_inicio', label:'Mes inicio', type:'number', value: vals.mes_inicio ?? 1 },
-    { key:'mes_fin', label:'Mes fin', type:'number', value: vals.mes_fin ?? 1 },
-    ...camposMedicionActividad(Object.assign({ tipo_medicion:'simple' }, vals)),
+    ...camposMedicionActividad(Object.assign({ tipo_medicion:'simple' }, vals, { mes_inicio:1, mes_fin:1 })),
     { key:'responsable', label:'Responsable', type:'text', value: vals.responsable || 'Comité de Cafeteros de Caldas' },
     { key:'observaciones', label:'Observaciones', type:'textarea', value: vals.observaciones || '' },
   ];
   const cambios = await openFormModal({ title:'Nueva actividad', fields: base({}), rebuild: base });
   if(!cambios) return;
   if(!cambios.producto_id || !cambios.nombre){ toast('Producto y nombre son obligatorios.'); return; }
+  cambios.mes_inicio = 1; cambios.mes_fin = 1; // el rango de meses se programa después desde el Cronograma
   try{
     await apiPost(Object.assign({ action:'createActividad', token: TOKEN }, cambios));
     toast('Actividad creada.');
