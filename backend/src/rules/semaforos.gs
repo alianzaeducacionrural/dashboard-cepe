@@ -55,30 +55,25 @@ function mesesProgramados_(estadosJson) {
  * actividades (como pasó con "Canasta educativa": 25% guardado vs. 52.2%
  * real de sus 4 actividades). Sin actividades, el % se calcula según su
  * propio tipo_medicion: 'manual' (pct_real tal cual, default), 'meta'
- * (alcanzado/meta) o 'mensual'.
+ * (alcanzado/meta).
  *
- * 'mensual' usa `estados_mensuales` SOLO para el rango de meses programados
- * (Cronograma: qué meses aplican, con huecos si es el caso) — el % de avance
- * real NO se deriva de marcar celdas como "realizado" ahí, sino que es
- * `pct_real` tal cual, un número reportado directamente (p. ej. desde el
- * informe oficial de cumplimiento). Así el avance general y de cada producto
- * queda consistente con lo reportado, y el Cronograma queda libre para
- * usarse solo como calendario/bitácora sin que un clic cambie el % mostrado
- * en Productos o en el dashboard.
+ * El Cronograma es independiente de cómo se mide el avance: `estados_mensuales`
+ * (qué meses están programados y en qué estado, con huecos si es el caso) solo
+ * define mes_inicio/mes_fin para el semáforo, sin importar el tipo_medicion, y
+ * el % NUNCA se deriva de marcar celdas ahí. Editar el producto no toca el
+ * Cronograma, y editar el Cronograma no toca el % ni el tipo de medición.
  */
 function computarProducto_(producto, mesActual, actividadesDelProducto) {
   let mesInicio = Number(producto.mes_inicio);
   let mesFin = Number(producto.mes_fin);
+  const programados = mesesProgramados_(producto.estados_mensuales);
+  if (programados.length) { mesInicio = programados[0]; mesFin = programados[programados.length - 1]; }
   const tipoMedicion = producto.tipo_medicion || 'manual';
   let pctReal;
   if (tipoMedicion === 'meta') {
     const meta = Number(producto.meta) || 0;
     const alcanzado = Number(producto.alcanzado) || 0;
     pctReal = meta > 0 ? Math.round((alcanzado / meta) * 1000) / 10 : 0;
-  } else if (tipoMedicion === 'mensual') {
-    const programados = mesesProgramados_(producto.estados_mensuales);
-    if (programados.length) { mesInicio = programados[0]; mesFin = programados[programados.length - 1]; }
-    pctReal = Number(producto.pct_real) || 0;
   } else {
     pctReal = Number(producto.pct_real) || 0;
   }
@@ -130,28 +125,27 @@ function computarProductos_(productos, mesActual, actividades) {
  *     "17 de 191 estudiantes").
  *   - 'simple' (sí/no): completada=true/false para actividades que no tienen
  *     una cantidad de por medio (p. ej. "Diseñar el protocolo"). % = 100 o 0.
- *   - 'mensual': `estados_mensuales` define solo el rango de meses programados
- *     (Cronograma, con huecos si aplica); el % de avance es `pct_real` tal
- *     cual, reportado directamente (igual razón que en computarProducto_:
- *     el Cronograma es calendario, no la fuente del %).
+ *   - 'manual': `pct_real` tal cual, un número reportado directamente.
+ * Igual que en computarProducto_, el Cronograma (`estados_mensuales`) solo
+ * define mes_inicio/mes_fin y es independiente del tipo de medición y del %.
  * Esta distinción le importa sobre todo a quien carga datos en el panel
  * admin; en las vistas públicas todas se ven igual (barra + estado).
  */
 function computarActividad_(actividad, mesActual) {
   let mesInicio = Number(actividad.mes_inicio) || 1;
   let mesFin = Number(actividad.mes_fin) || mesInicio;
+  const programados = mesesProgramados_(actividad.estados_mensuales);
+  if (programados.length) { mesInicio = programados[0]; mesFin = programados[programados.length - 1]; }
   const meta = Number(actividad.meta) || 0;
   const alcanzado = Number(actividad.alcanzado) || 0;
   const tipoMedicion = actividad.tipo_medicion || (meta > 0 ? 'meta' : 'simple');
   let pctAvance;
   if (tipoMedicion === 'meta') {
     pctAvance = meta > 0 ? Math.round((alcanzado / meta) * 1000) / 10 : 0;
-  } else if (tipoMedicion === 'mensual') {
-    const programados = mesesProgramados_(actividad.estados_mensuales);
-    if (programados.length) { mesInicio = programados[0]; mesFin = programados[programados.length - 1]; }
-    pctAvance = Number(actividad.pct_real) || 0;
-  } else {
+  } else if (tipoMedicion === 'simple') {
     pctAvance = actividad.completada === true ? 100 : 0;
+  } else {
+    pctAvance = Number(actividad.pct_real) || 0;
   }
   const pctEsperado = calcularPctEsperado_(mesInicio, mesFin, mesActual);
   const color = calcularColorSemaforo_(pctAvance, pctEsperado, mesInicio, mesFin, mesActual);

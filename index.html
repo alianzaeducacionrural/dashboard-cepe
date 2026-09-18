@@ -184,12 +184,6 @@
   .modal .field-checkbox{display:flex; align-items:center; gap:9px; margin:14px 0; font-size:13px; font-weight:500;}
   .modal .field-checkbox input{width:auto; margin:0; accent-color:var(--tierra);}
   .modal .modal-context{font-size:12px; color:var(--text-muted); margin:-4px 0 4px; line-height:1.4;}
-  .meses-grid{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;}
-  .mes-btn{border:1px solid var(--border); border-radius:var(--radius-sm); padding:6px 11px; font-size:11px; font-weight:700; cursor:pointer; font-family:var(--font-body); transition:filter .15s;}
-  .mes-btn:hover{filter:brightness(0.95);}
-  [data-theme="dark"] .mes-btn:hover{filter:brightness(1.15);}
-  .mes-btn-vacio{background:transparent; border:1px dashed var(--border-strong); color:var(--text-muted); opacity:.6;}
-  .mes-btn-vacio:hover{opacity:1; border-color:var(--tierra); color:var(--tierra); filter:none;}
   .admin-subnav{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;}
   .admin-subnav button{
     background:var(--card); border:1px solid var(--border); color:var(--text-muted); padding:8px 14px;
@@ -423,20 +417,17 @@ function toast(msg){
   clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
-// 4 estados posibles para un mes: no iniciado (gris) -> en proceso (amarillo) -> atrasado (rojo) -> realizado (verde).
-const CICLO_MES = { no_iniciado: 'en_proceso', en_proceso: 'atrasado', atrasado: 'realizado', realizado: 'no_iniciado' };
+// 4 estados posibles para un mes: no iniciado (gris), en proceso (amarillo), atrasado (rojo), realizado (verde).
 const ESTADO_MES_LABEL = { no_iniciado: 'No iniciado', en_proceso: 'En proceso', atrasado: 'Atrasado', realizado: 'Realizado' };
 const COLOR_MES_BG = { no_iniciado: 'var(--gris-sem-suave)', en_proceso: 'var(--amarillo-sem-suave)', atrasado: 'var(--rojo-suave)', realizado: 'var(--verde-suave)' };
 const COLOR_MES_FG = { no_iniciado: 'var(--gris-sem)', en_proceso: 'var(--amarillo-sem)', atrasado: 'var(--rojo)', realizado: 'var(--verde)' };
 
 /**
  * Modal de edición genérico: reemplaza prompt()/confirm() por un formulario propio.
- * fields: [{key, label, type:'text'|'number'|'textarea'|'select'|'checkbox'|'meses', value, options, reactive, mesInicio, mesFin}]
+ * fields: [{key, label, type:'text'|'number'|'textarea'|'select'|'checkbox', value, options, reactive}]
  * - Un campo select con `reactive:true` dispara `rebuild(valoresActuales)` al cambiar, que debe
  *   devolver un nuevo arreglo de fields; el modal se vuelve a pintar sin cerrarse (para que
  *   formularios como el de producto muestren campos distintos según tipo_medicion elegido).
- * - El tipo 'meses' pinta un botón por mes (entre f.mesInicio y f.mesFin) que cicla
- *   no iniciado -> en proceso -> atrasado -> realizado al hacer clic; el valor final se guarda como JSON string.
  * Devuelve un objeto {key: valor} al guardar, o null si se cancela.
  */
 function openFormModal({ title, context, fields, rebuild, okLabel }){
@@ -463,33 +454,11 @@ function openFormModal({ title, context, fields, rebuild, okLabel }){
       if(f.type === 'textarea'){
         return `<div class="field"><label class="field-label">${esc(f.label)}</label><textarea id="ff_${f.key}">${esc(currentValues[f.key] ?? '')}</textarea></div>`;
       }
-      if(f.type === 'meses'){
-        // No se asume un rango corrido: se recorren los 9 meses del proyecto y cada
-        // uno se pinta como "programado" (botón de color, cicla estado) o "no
-        // programado" (botón punteado, lo agrega) — así el propio grid puede
-        // representar huecos (p. ej. programado en 2,4,5 pero no en 3).
-        const estados = (currentValues[f.key] && typeof currentValues[f.key] === 'object') ? currentValues[f.key] : {};
-        return `<div class="field"><label class="field-label">${esc(f.label)}</label>
-          <div class="meses-grid" id="ff_${f.key}">
-            ${CONFIG.meses.map((nombreMes,i) => {
-              const m = i+1;
-              const programado = (m in estados) || (String(m) in estados);
-              if(!programado){
-                return `<button type="button" class="mes-btn mes-btn-vacio" data-mes="${m}" data-accion="agregar">${esc(nombreMes)}</button>`;
-              }
-              const estado = estados[m] || estados[String(m)];
-              return `<button type="button" class="mes-btn" data-mes="${m}" data-accion="ciclar" style="background:${COLOR_MES_BG[estado]}; color:${COLOR_MES_FG[estado]};">${esc(nombreMes)}</button>`;
-            }).join('')}
-          </div>
-          <div class="muted" style="font-size:10.5px; margin-top:5px;">Clic en un mes sin programar lo agrega; clic en uno programado cicla: no iniciado → en proceso → atrasado → realizado (un cuarto clic lo quita).</div>
-        </div>`;
-      }
       return `<div class="field"><label class="field-label">${esc(f.label)}</label><input type="${f.type || 'text'}" id="ff_${f.key}" value="${esc(currentValues[f.key] ?? '')}"></div>`;
     };
 
     const readValues = () => {
       currentFields.forEach(f => {
-        if(f.type === 'meses') return;
         const el = document.getElementById('ff_' + f.key);
         if(!el) return;
         if(f.type === 'checkbox') currentValues[f.key] = el.checked;
@@ -501,23 +470,6 @@ function openFormModal({ title, context, fields, rebuild, okLabel }){
     const renderBody = () => {
       document.getElementById('formModalBody').innerHTML = currentFields.map(renderField).join('');
       currentFields.forEach(f => {
-        if(f.type === 'meses'){
-          document.getElementById('ff_' + f.key).querySelectorAll('.mes-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-              const mes = Number(btn.dataset.mes);
-              const estados = (currentValues[f.key] && typeof currentValues[f.key] === 'object') ? currentValues[f.key] : {};
-              if(btn.dataset.accion === 'agregar'){
-                estados[mes] = 'no_iniciado';
-              } else {
-                const actual = estados[mes] || estados[String(mes)] || 'no_iniciado';
-                if(actual === 'realizado'){ delete estados[mes]; delete estados[String(mes)]; } // 4to clic: lo quita
-                else estados[mes] = CICLO_MES[actual];
-              }
-              currentValues[f.key] = estados;
-              renderBody();
-            });
-          });
-        }
         if(f.reactive && f.type === 'select'){
           document.getElementById('ff_' + f.key).addEventListener('change', (e) => {
             readValues();
@@ -544,7 +496,7 @@ function openFormModal({ title, context, fields, rebuild, okLabel }){
       readValues();
       const out = {};
       currentFields.forEach(f => {
-        out[f.key] = f.type === 'meses' ? JSON.stringify(currentValues[f.key] || {}) : currentValues[f.key];
+        out[f.key] = currentValues[f.key];
       });
       close(); resolve(out);
     };
@@ -845,50 +797,28 @@ function viewCronograma(){
   const objetivos = DATA.objetivos;
   const colspanMeses = CONFIG.meses.length;
   const filas = [];
-  const ganttBar = (item, tipo, pct, small, editable) => {
-    const mesInicio = item.mes_inicio, mesFin = item.mes_fin;
-    const esMensual = item.tipo_medicion === 'mensual';
-    const estadosItem = item.estados_mensuales || {};
+  // El calendario sale SOLO de estados_mensuales (un mes está programado si tiene clave,
+  // sin asumir meses corridos), sin importar cómo se mida el avance del ítem: así el
+  // Cronograma y los datos del producto/actividad no se pisan entre sí.
+  const ganttBar = (item, tipo, small, editable) => {
+    const estados = item.estados_mensuales || {};
     return CONFIG.meses.map((m,i)=>{
       const mes = i+1;
-      // Un ítem 'mensual' no asume meses corridos: un mes está "activo" solo si
-      // tiene una clave explícita en estados_mensuales (puede haber huecos, p. ej.
-      // programado en 2,4,5 pero no en 3). Los tipos manual/meta/simple sí usan
-      // el rango mes_inicio–mes_fin como una barra continua (no soportan huecos).
-      const activo = esMensual ? (mes in estadosItem || String(mes) in estadosItem) : (mes>=mesInicio && mes<=mesFin);
+      const estado = estados[mes] || estados[String(mes)];
       if(ADMIN_MODE && editable){
-        if(!activo){
+        if(!estado){
           return `<td class="cell"><button type="button" class="mes-cell-btn mes-cell-vacia" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: gestionar" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})">${icon('plus',{size:10})}</button></td>`;
         }
-        if(esMensual){
-          const estados = item.estados_mensuales || {};
-          const estado = estados[mes] || estados[String(mes)] || 'no_iniciado';
-          return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${ESTADO_MES_LABEL[estado]||estado} (clic para gestionar)" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})"></button></td>`;
-        }
-        return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${colorHex(item.color)};" title="${esc(item.nombre)}: ${pct}% — clic para gestionar este mes" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})"></button></td>`;
+        return `<td class="cell"><button type="button" class="mes-cell-btn" style="background:${COLOR_MES_SOLID[estado]};" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${ESTADO_MES_LABEL[estado]||estado} (clic para gestionar)" onclick="abrirGestionMes('${tipo}','${item.id}',${mes})"></button></td>`;
       }
-      if(!activo) return `<td class="cell"></td>`;
-      if(esMensual){
-        const estados = item.estados_mensuales || {};
-        const estado = estados[mes] || estados[String(mes)] || 'no_iniciado';
-        return `<td class="cell"><div class="bar" style="background:${COLOR_MES_SOLID[estado]}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${ESTADO_MES_LABEL[estado]||estado}"></div></td>`;
-      }
-      return `<td class="cell"><div class="bar" style="background:${colorHex(item.color)}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)}: ${pct}%"></div></td>`;
+      if(!estado) return `<td class="cell"></td>`;
+      return `<td class="cell"><div class="bar" style="background:${COLOR_MES_SOLID[estado]}; ${small?'height:11px; opacity:.85; margin:1px 2px;':''}" title="${esc(item.nombre)} - ${CONFIG.meses[mes-1]}: ${ESTADO_MES_LABEL[estado]||estado}"></div></td>`;
     }).join('');
   };
-  // Estado de un ítem (producto o actividad) en un mes puntual, en el vocabulario
-  // de 4 estados (no_iniciado/en_proceso/atrasado/realizado) — null si ese mes no
-  // le aplica. Los ítems 'mensual' ya usan ese vocabulario directamente; los demás
-  // (manual/meta/simple) traducen su semáforo general (verde/amarillo/rojo/gris/azul)
-  // al mismo vocabulario para poder mezclarlos.
+  // Estado de un ítem en un mes puntual (null si ese mes no le aplica).
   const estadoMesDeItem_ = (item, mes) => {
-    if(item.tipo_medicion === 'mensual'){
-      const estados = item.estados_mensuales || {};
-      if(!(mes in estados) && !(String(mes) in estados)) return null;
-      return estados[mes] || estados[String(mes)] || 'no_iniciado';
-    }
-    if(mes < item.mes_inicio || mes > item.mes_fin) return null;
-    return ({ verde:'realizado', amarillo:'en_proceso', rojo:'atrasado', gris:'no_iniciado', azul:'realizado' })[item.color] || 'no_iniciado';
+    const estados = item.estados_mensuales || {};
+    return estados[mes] || estados[String(mes)] || null;
   };
   // Un producto con actividades no tiene avance propio (se deriva de ellas), así que
   // su celda de cada mes también se deriva: el estado que más actividades compartan
@@ -917,10 +847,10 @@ function viewCronograma(){
     DATA.productos.filter(p => p.objetivo_id === o.id).forEach(p => {
       const actividadesDelProducto = DATA.actividades.filter(a=>a.producto_id===p.id);
       const tieneActividades = actividadesDelProducto.length > 0;
-      const barraProducto = tieneActividades ? ganttBarConsolidado(p, actividadesDelProducto) : ganttBar(p, 'producto', p.pct_real, false, true);
+      const barraProducto = tieneActividades ? ganttBarConsolidado(p, actividadesDelProducto) : ganttBar(p, 'producto', false, true);
       filas.push(`<tr><td style="padding:8px 10px; font-size:12px; font-weight:600;">${esc(p.nombre)}</td>${barraProducto}</tr>`);
       actividadesDelProducto.forEach(a => {
-        filas.push(`<tr><td style="padding:5px 10px 5px 26px; font-size:11px; color:var(--text-muted);">↳ ${esc(a.nombre)}</td>${ganttBar(a, 'actividad', a.pct_avance, true, true)}</tr>`);
+        filas.push(`<tr><td style="padding:5px 10px 5px 26px; font-size:11px; color:var(--text-muted);">↳ ${esc(a.nombre)}</td>${ganttBar(a, 'actividad', true, true)}</tr>`);
       });
     });
   });
@@ -963,7 +893,7 @@ async function guardarCambiosMes_(tipo, id, cambiosLocal, cambiosApi){
   }catch(err){ toast('No se pudo guardar: '+err.message); cargarDatos(); }
 }
 const ESTADO_MES_OPCIONES = [
-  { value:'fuera_rango', label:'No programado (fuera del rango)' },
+  { value:'fuera_rango', label:'No programado' },
   { value:'no_iniciado', label:'No iniciado' },
   { value:'en_proceso', label:'En proceso' },
   { value:'atrasado', label:'Atrasado' },
@@ -971,62 +901,57 @@ const ESTADO_MES_OPCIONES = [
 ];
 /**
  * Modal único para gestionar un mes de un producto/actividad desde el Cronograma
- * o Vista mensual: programarlo, cambiar su estado, o quitarlo — todo en un solo
- * lugar en vez de acciones sueltas por celda. Si el ítem no era de medición
- * 'mensual', se convierte automáticamente al guardar un estado real (no al
- * dejarlo "fuera de rango"), para no gestionar mes a mes algo que no aplica.
+ * o Vista mensual: programarlo, cambiar su estado, o quitarlo.
+ *
+ * Solo escribe `estados_mensuales` — nunca el % de avance ni el tipo de medición —
+ * para que el Cronograma y los datos del producto sean independientes.
  *
  * No se asume que los meses programados sean corridos: un producto puede estar
  * programado en, por ejemplo, los meses 2, 4, 5 y 6 sin el 3 (así es el plan de
- * trabajo real para varios productos). Por eso "programado" se define por si el
- * mes tiene una clave propia en estados_mensuales, y agregar/quitar un mes solo
- * toca esa clave puntual — nunca extiende ni recorta un rango contiguo asumido.
+ * trabajo real para varios productos). "Programado" = el mes tiene clave propia en
+ * estados_mensuales, y agregar/quitar un mes solo toca esa clave puntual.
  */
 async function abrirGestionMes(tipo, id, mes){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
   const lista = tipo === 'producto' ? DATA.productos : DATA.actividades;
   const item = lista.find(x=>x.id===id);
-  const esMensual = item.tipo_medicion === 'mensual';
   const estadosActuales = item.estados_mensuales || {};
-  const programado = esMensual ? (mes in estadosActuales || String(mes) in estadosActuales) : (mes >= item.mes_inicio && mes <= item.mes_fin);
-  const valorActual = programado ? (esMensual ? (estadosActuales[mes] || estadosActuales[String(mes)] || 'no_iniciado') : 'no_iniciado') : 'fuera_rango';
+  const estadoActual = estadosActuales[mes] || estadosActuales[String(mes)];
 
   const respuesta = await openFormModal({
     title: item.nombre,
     context: `Mes: ${CONFIG.meses[mes-1]}`,
-    fields: [{ key:'estado', label:'Estado de este mes', type:'select', options:ESTADO_MES_OPCIONES, value:valorActual }],
+    fields: [{ key:'estado', label:'Estado de este mes', type:'select', options:ESTADO_MES_OPCIONES, value:estadoActual || 'fuera_rango' }],
   });
   if(!respuesta) return;
 
+  const nuevosEstados = Object.assign({}, estadosActuales);
   if(respuesta.estado === 'fuera_rango'){
-    if(!programado) return;
-    // Quitar solo borra la clave de este mes puntual — el resto del calendario no se toca.
-    const nuevosEstados = Object.assign({}, estadosActuales);
+    if(!estadoActual) return;
     delete nuevosEstados[mes]; delete nuevosEstados[String(mes)];
     if(!Object.keys(nuevosEstados).length){ toast('Este era el único mes programado. Si ya no aplica, elimínalo desde Panel admin.'); return; }
-    return guardarCambiosMes_(tipo, id, { estados_mensuales: nuevosEstados }, { estados_mensuales: JSON.stringify(nuevosEstados) });
+  } else {
+    nuevosEstados[mes] = respuesta.estado;
   }
-
-  // Agregar/cambiar solo toca la clave de este mes puntual — no se rellenan los meses intermedios.
-  const nuevosEstados = Object.assign({}, estadosActuales, { [mes]: respuesta.estado });
-  const cambiosLocal = { estados_mensuales: nuevosEstados };
-  const cambiosApi = { estados_mensuales: JSON.stringify(nuevosEstados) };
-  if(!esMensual){ cambiosLocal.tipo_medicion = 'mensual'; cambiosApi.tipo_medicion = 'mensual'; }
-  return guardarCambiosMes_(tipo, id, cambiosLocal, cambiosApi);
+  return guardarCambiosMes_(tipo, id, { estados_mensuales: nuevosEstados }, { estados_mensuales: JSON.stringify(nuevosEstados) });
 }
 window.abrirGestionMes = abrirGestionMes;
 
 /* ===================== VISTA MENSUAL ===================== */
 let MES_SELECCIONADO = CONFIG.mesActual;
+function mesProgramadoDe_(item, mes){
+  const estados = item.estados_mensuales || {};
+  return (mes in estados) || (String(mes) in estados);
+}
 function viewMensual(){
   const mes = MES_SELECCIONADO;
   const bloques = [];
   DATA.objetivos.forEach(o => {
     const filasObjetivo = [];
-    DATA.productos.filter(p => p.objetivo_id === o.id && mes>=p.mes_inicio && mes<=p.mes_fin).forEach(p => {
+    DATA.productos.filter(p => p.objetivo_id === o.id && mesProgramadoDe_(p, mes)).forEach(p => {
       const tieneActividades = DATA.actividades.some(a=>a.producto_id===p.id);
       filasObjetivo.push(filaMensual(p, 'producto', mes, false, !tieneActividades));
-      DATA.actividades.filter(a => a.producto_id === p.id && mes>=a.mes_inicio && mes<=a.mes_fin).forEach(a => {
+      DATA.actividades.filter(a => a.producto_id === p.id && mesProgramadoDe_(a, mes)).forEach(a => {
         filasObjetivo.push(filaMensual(a, 'actividad', mes, true, true));
       });
     });
@@ -1037,7 +962,7 @@ function viewMensual(){
   });
   return `
   <div class="section-title">${icon('calendar',{size:20,color:'var(--tierra)'})}Vista mensual</div>
-  <p class="muted" style="font-size:12.5px;">Elige un mes para ver todo lo que estaba programado en él (productos y actividades cuyo rango de meses lo incluye).</p>
+  <p class="muted" style="font-size:12.5px;">Elige un mes para ver todo lo que estaba programado en él (productos y actividades programados en él).</p>
   <div class="admin-subnav">
     ${CONFIG.meses.map((m,i)=>`<button class="${i+1===mes?'active':''}" onclick="seleccionarMes(${i+1})">${m}</button>`).join('')}
   </div>
@@ -1049,7 +974,6 @@ function seleccionarMes(mes){ MES_SELECCIONADO = mes; renderView(); }
 window.seleccionarMes = seleccionarMes;
 
 function filaMensual(item, tipo, mes, esHija, editable){
-  const esMensual = item.tipo_medicion === 'mensual';
   const estados = item.estados_mensuales || {};
   const estadoMes = estados[mes] || estados[String(mes)] || 'no_iniciado';
   const pct = tipo === 'producto' ? item.pct_real : item.pct_avance;
@@ -1065,7 +989,7 @@ function filaMensual(item, tipo, mes, esHija, editable){
       </div>
     </div>
     <div style="display:flex; align-items:center; gap:8px;">
-      ${esMensual ? `<span style="background:${COLOR_MES_BG[estadoMes]}; color:${COLOR_MES_FG[estadoMes]}; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700;">${ESTADO_MES_LABEL[estadoMes]||estadoMes} este mes</span>` : ''}
+      <span style="background:${COLOR_MES_BG[estadoMes]}; color:${COLOR_MES_FG[estadoMes]}; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700;">${ESTADO_MES_LABEL[estadoMes]||estadoMes} este mes</span>
       ${accion}
     </div>
   </div>`;
@@ -1421,23 +1345,16 @@ window.eliminarObjetivoAdmin = eliminarObjetivoAdmin;
 
 /* ---- Medición compartida (producto/actividad) ---- */
 function camposMedicionProducto(p){
-  const tipo = p.tipo_medicion || 'manual';
-  const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['manual','meta','mensual'], value:tipo, reactive:true };
+  const tipo = p.tipo_medicion === 'meta' ? 'meta' : 'manual';
+  const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['manual','meta'], value:tipo, reactive:true };
   if(tipo === 'meta') return [sel, { key:'meta', label:'Meta', type:'number', value:p.meta || 0 }, { key:'alcanzado', label:'Alcanzado', type:'number', value:p.alcanzado || 0 }];
-  if(tipo === 'mensual') return [sel,
-    { key:'pct_real', label:'% de avance real (según reporte oficial)', type:'number', value:p.pct_real || 0 },
-    { key:'estados_mensuales', label:'Cronograma (meses programados)', type:'meses', value:(p.estados_mensuales && typeof p.estados_mensuales==='object') ? p.estados_mensuales : {} },
-  ];
   return [sel, { key:'pct_real', label:'% de avance', type:'number', value:p.pct_real || 0 }];
 }
 function camposMedicionActividad(a){
-  const tipo = a.tipo_medicion || 'simple';
-  const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['simple','meta','mensual'], value:tipo, reactive:true };
+  const tipo = ['simple','meta','manual'].includes(a.tipo_medicion) ? a.tipo_medicion : 'simple';
+  const sel = { key:'tipo_medicion', label:'Tipo de medición', type:'select', options:['simple','meta','manual'], value:tipo, reactive:true };
   if(tipo === 'meta') return [sel, { key:'meta', label:'Meta', type:'number', value:a.meta || 0 }, { key:'alcanzado', label:'Alcanzado', type:'number', value:a.alcanzado || 0 }];
-  if(tipo === 'mensual') return [sel,
-    { key:'pct_real', label:'% de avance real (según reporte oficial)', type:'number', value:a.pct_real || 0 },
-    { key:'estados_mensuales', label:'Cronograma (meses programados)', type:'meses', value:(a.estados_mensuales && typeof a.estados_mensuales==='object') ? a.estados_mensuales : {} },
-  ];
+  if(tipo === 'manual') return [sel, { key:'pct_real', label:'% de avance', type:'number', value:a.pct_real || 0 }];
   return [sel, { key:'completada', label:'Marcar como completada', type:'checkbox', value:!!a.completada }];
 }
 
