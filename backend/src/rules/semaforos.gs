@@ -167,3 +167,41 @@ function computarActividad_(actividad, mesActual) {
 function computarActividades_(actividades, mesActual) {
   return actividades.map(a => computarActividad_(a, mesActual));
 }
+
+/**
+ * Indicadores MEL: avance real reportado trimestre a trimestre (avance_q1..q4,
+ * cada uno el % de la meta logrado en ese trimestre — vienen así de la matriz
+ * de seguimiento MEL oficial), en vez de un simple "se midió sí/no". El % total
+ * es la suma de los 4 trimestres. Para el semáforo se reutiliza el mismo motor
+ * que productos (calcularPctEsperado_/calcularColorSemaforo_), tratando el año
+ * como un rango de 4 "meses" (trimestres) — el mismo indicador puede estar
+ * verde en enero (aún no le tocaba) y rojo en octubre (debía tener más avance).
+ */
+function computarMel_(indicador, mesActual) {
+  // mesActual usa la numeración del proyecto (Mar=1...Nov=9); los trimestres del
+  // Q1-Q4 de la matriz MEL son de calendario (Q1 ene-mar, Q3 jul-sep...), así que
+  // se convierte primero al mes calendario real (Mar=3) antes de sacar el trimestre.
+  const mesCalendario = mesActual + 2;
+  const trimestreActual = Math.min(4, Math.max(1, Math.ceil(mesCalendario / 3)));
+  const q1 = Number(indicador.avance_q1) || 0;
+  const q2 = Number(indicador.avance_q2) || 0;
+  const q3 = Number(indicador.avance_q3) || 0;
+  const q4 = Number(indicador.avance_q4) || 0;
+  const pctAvance = Math.round((q1 + q2 + q3 + q4) * 10) / 10;
+  const pctEsperado = calcularPctEsperado_(1, 4, trimestreActual);
+  const color = calcularColorSemaforo_(pctAvance, pctEsperado, 1, 4, trimestreActual);
+  return Object.assign({}, indicador, {
+    tipo: indicador.tipo || 'Producto',
+    meta: Number(indicador.meta) || 0,
+    avance_q1: q1, avance_q2: q2, avance_q3: q3, avance_q4: q4,
+    pct_avance: pctAvance,
+    pct_esperado: pctEsperado,
+    trimestre_actual: trimestreActual,
+    color: color,
+    estado: ESTADO_POR_COLOR[color],
+  });
+}
+
+function computarMels_(indicadores, mesActual) {
+  return indicadores.map(m => computarMel_(m, mesActual));
+}

@@ -48,19 +48,19 @@ function generarAlertasAutomaticas_() {
     }
   });
 
-  const indicadores = leerHojaComoObjetos_(CONFIG.SHEETS.INDICADORES_MEL);
+  const indicadores = MelService.listar();
   indicadores.forEach(m => {
-    if (m.corresponde_medicion === true && m.se_midio === 'No') {
+    if (m.pct_avance < m.pct_esperado * 0.5) {
       out.push({
         id: 'AUTO-indicador_sin_medir-' + m.id, tipo: 'indicador_sin_medir', severidad: 'alta',
-        descripcion: 'Indicador MEL "' + m.nombre + '" correspondía medición y no se realizó.',
+        descripcion: 'Indicador MEL "' + m.nombre + '" con avance ' + m.pct_avance + '% muy por debajo de lo esperado a este punto del año (' + m.pct_esperado + '%).',
         producto_id: '', indicador_id: m.id, fecha: CONFIG.FECHA_CORTE, estado: 'activa',
         accion: 'Coordinar con el equipo MEL la aplicación pendiente del instrumento.',
       });
-    } else if (m.se_midio === 'Parcial') {
+    } else if (m.pct_avance < m.pct_esperado * 0.85) {
       out.push({
         id: 'AUTO-indicador_parcial-' + m.id, tipo: 'indicador_sin_medir', severidad: 'media',
-        descripcion: 'Indicador MEL "' + m.nombre + '" con medición parcial. ' + (m.observaciones || ''),
+        descripcion: 'Indicador MEL "' + m.nombre + '" con avance ' + m.pct_avance + '% ligeramente por debajo de lo esperado (' + m.pct_esperado + '%).',
         producto_id: '', indicador_id: m.id, fecha: CONFIG.FECHA_CORTE, estado: 'activa',
         accion: 'Completar la medición pendiente en el próximo corte.',
       });

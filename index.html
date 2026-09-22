@@ -997,26 +997,53 @@ function filaMensual(item, tipo, mes, esHija, editable){
 
 /* ===================== MEL ===================== */
 function viewMEL(){
+  const objetivos = DATA.objetivos;
+  const tablas = objetivos.map(o => {
+    const filas = DATA.mel.filter(m => m.objetivo_id === o.id).map(filaMel).join('');
+    if(!filas) return '';
+    return `
+    <div class="obj-tabla-block" data-objetivo-header="${o.id}" style="margin-bottom:24px;">
+      <div class="obj-tabla-titulo" style="padding:13px 16px;">${esc(o.nombre)}</div>
+      <div class="table-wrap">
+        <table class="tabla-productos-objetivo">
+          <thead><tr><th>Indicador</th><th>Periodicidad</th><th>Meta / línea base</th><th>Avance vs. esperado</th><th>Observaciones</th></tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+  const sinObjetivo = DATA.mel.filter(m => !objetivos.some(o=>o.id===m.objetivo_id));
   return `
   <div class="section-title">${icon('chart',{size:20,color:'var(--tierra)'})}Indicadores MEL</div>
+  <p class="muted" style="font-size:12.5px;">Avance trimestral frente a la meta anual de cada indicador (Q1 ene–mar, Q2 abr–jun, Q3 jul–sep, Q4 oct–dic), agrupados por objetivo específico.</p>
   <div class="toolbar">
     <select id="fMelPeriodicidad"><option value="">Toda periodicidad</option>${[...new Set(DATA.mel.map(m=>m.periodicidad))].map(p=>`<option>${p}</option>`).join('')}</select>
-    <select id="fMelEstado"><option value="">Todo estado de medición</option><option>Sí</option><option>No</option><option>Parcial</option></select>
   </div>
-  <div class="table-wrap">
-    <table id="tablaMel">
-      <thead><tr><th>Indicador</th><th>Periodicidad</th><th>¿Corresponde medición?</th><th>¿Se midió?</th><th>Observaciones</th></tr></thead>
-      <tbody>
-        ${DATA.mel.map(m => { const est = m.se_midio==='Sí'?'en_tiempo':m.se_midio==='Parcial'?'en_riesgo':'retrasado'; return `<tr data-periodicidad="${m.periodicidad}" data-medido="${m.se_midio}">
-          <td>${esc(m.nombre)}</td>
-          <td>${m.periodicidad}</td>
-          <td>${m.corresponde_medicion?'Sí':'No'}</td>
-          <td><span class="badge-estado ${est}">${estadoIcon(est)}${m.se_midio}</span></td>
-          <td class="obs-text">${esc(m.observaciones)}</td>
-        </tr>`; }).join('')}
-      </tbody>
-    </table>
-  </div>${ADMIN_MODE?`<p class="muted" style="font-size:11.5px; margin-top:10px;">Para editar, agregar o eliminar indicadores, ve a ${icon('settings',{size:11})} Panel admin.</p>`:''}`;
+  <div id="melTablas">${tablas}</div>
+  ${sinObjetivo.length ? `<div class="table-wrap" style="margin-top:14px;"><table><thead><tr><th>Indicador</th><th>Periodicidad</th><th>Meta / línea base</th><th>Avance vs. esperado</th><th>Observaciones</th></tr></thead><tbody>${sinObjetivo.map(filaMel).join('')}</tbody></table></div>` : ''}
+  ${ADMIN_MODE?`<p class="muted" style="font-size:11.5px; margin-top:10px;">Para editar, agregar o eliminar indicadores, ve a ${icon('settings',{size:11})} Panel admin.</p>`:''}`;
+}
+function filaMel(m){
+  const trimestres = [['Q1','avance_q1'],['Q2','avance_q2'],['Q3','avance_q3'],['Q4','avance_q4']];
+  return `<tr data-periodicidad="${esc(m.periodicidad)}">
+    <td style="min-width:230px;">
+      <div style="font-weight:600;">${esc(m.nombre)}</div>
+      <div style="margin-top:7px;">${tipoBadge(m.tipo)}</div>
+    </td>
+    <td>${esc(m.periodicidad)}</td>
+    <td style="font-size:11.5px; min-width:150px;">
+      <div>Meta: <strong>${m.meta}</strong></div>
+      <div class="muted" style="margin-top:3px;">Línea base: ${esc(m.linea_base) || '—'}</div>
+    </td>
+    <td style="min-width:210px;">
+      <div class="prog-track"><div class="prog-fill" style="transform:scaleX(${scaleX(m.pct_avance)}); background:${colorHex(m.color)}"></div><div class="prog-marker" style="left:${Math.min(100,m.pct_esperado)}%"></div></div>
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--text-muted); margin-top:4px;"><span>Avance: <strong>${m.pct_avance}%</strong></span><span>Esperado: ${m.pct_esperado}%</span></div>
+      <div style="display:flex; gap:3px; margin-top:7px;">
+        ${trimestres.map(([label,key])=>`<div style="flex:1; text-align:center;" title="${label}: ${m[key]}% de la meta"><div style="height:6px; border-radius:3px; background:${m[key]>0?colorHex(m.color):'var(--border)'}; opacity:${m[key]>0?(0.45+Math.min(0.55,m[key]/100)):0.3};"></div><div style="font-size:8.5px; color:var(--text-tertiary); margin-top:2px;">${label}</div></div>`).join('')}
+      </div>
+    </td>
+    <td class="obs-text" style="max-width:280px;">${esc(m.observaciones)}</td>
+  </tr>`;
 }
 
 /* ===================== BENEFICIARIOS ===================== */
@@ -1524,30 +1551,45 @@ window.eliminarActividadAdmin = eliminarActividadAdmin;
 
 /* ---- Indicadores MEL ---- */
 const MEL_PERIODICIDADES = ['Mensual','Bimensual','Trimestral','Semestral','Anual'];
+const MEL_TIPOS = ['Producto','Resultado'];
 function adminTablaMEL(){
   return `
   <div style="margin-bottom:12px;"><button class="btn primary" onclick="crearMelAdmin()">${icon('plus',{size:13})}Agregar indicador</button></div>
   <div class="table-wrap"><table>
-    <thead><tr><th>Indicador</th><th>Periodicidad</th><th>¿Corresponde?</th><th>¿Se midió?</th><th></th></tr></thead>
-    <tbody>${DATA.mel.map(m=>`<tr>
-      <td style="max-width:340px;">${esc(m.nombre)}</td>
-      <td>${m.periodicidad}</td>
-      <td>${m.corresponde_medicion?'Sí':'No'}</td>
-      <td>${m.se_midio}</td>
+    <thead><tr><th>Indicador</th><th>Objetivo</th><th>Tipo</th><th>Periodicidad</th><th>Meta</th><th>Avance</th><th></th></tr></thead>
+    <tbody>${DATA.mel.map(m=>{
+      const obj = DATA.objetivos.find(o=>o.id===m.objetivo_id);
+      return `<tr>
+      <td style="max-width:280px;">${esc(m.nombre)}</td>
+      <td style="font-size:11px;">${obj ? esc(obj.nombre) : '—'}</td>
+      <td>${tipoBadge(m.tipo)}</td>
+      <td>${esc(m.periodicidad)}</td>
+      <td>${m.meta}</td>
+      <td><span class="badge-estado ${m.estado}">${estadoIcon(m.estado,11)}${m.pct_avance}%</span></td>
       <td style="white-space:nowrap;">${adminEditBtn('abrirEdicionMelAdmin', m.id)} ${btnEliminar('eliminarMelAdmin', m.id)}</td>
-    </tr>`).join('')}</tbody>
+    </tr>`;}).join('')}</tbody>
   </table></div>`;
+}
+function camposMel(m){
+  const objetivoOptions = DATA.objetivos.map(o=>({ value:o.id, label:o.nombre }));
+  return [
+    { key:'objetivo_id', label:'Objetivo', type:'select', options:objetivoOptions, value:m.objetivo_id || objetivoOptions[0].value },
+    { key:'nombre', label:'Nombre del indicador', type:'textarea', value:m.nombre || '' },
+    { key:'tipo', label:'Tipo', type:'select', options:MEL_TIPOS, value:m.tipo || 'Producto' },
+    { key:'periodicidad', label:'Periodicidad', type:'select', options:MEL_PERIODICIDADES, value:m.periodicidad || 'Trimestral' },
+    { key:'meta', label:'Meta', type:'number', value:m.meta || 0 },
+    { key:'linea_base', label:'Línea base', type:'text', value:m.linea_base || '' },
+    { key:'avance_q1', label:'Avance Q1 (ene-mar), % de la meta', type:'number', value:m.avance_q1 || 0 },
+    { key:'avance_q2', label:'Avance Q2 (abr-jun), % de la meta', type:'number', value:m.avance_q2 || 0 },
+    { key:'avance_q3', label:'Avance Q3 (jul-sep), % de la meta', type:'number', value:m.avance_q3 || 0 },
+    { key:'avance_q4', label:'Avance Q4 (oct-dic), % de la meta', type:'number', value:m.avance_q4 || 0 },
+    { key:'observaciones', label:'Observaciones', type:'textarea', value:m.observaciones || '' },
+  ];
 }
 async function abrirEdicionMelAdmin(id){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
   const m = DATA.mel.find(x=>x.id===id);
-  const cambios = await openFormModal({ title:m.nombre, fields:[
-    { key:'nombre', label:'Nombre del indicador', type:'textarea', value:m.nombre },
-    { key:'periodicidad', label:'Periodicidad', type:'select', options:MEL_PERIODICIDADES, value:m.periodicidad },
-    { key:'corresponde_medicion', label:'Corresponde medición este período', type:'checkbox', value:!!m.corresponde_medicion },
-    { key:'se_midio', label:'¿Se midió?', type:'select', options:['Sí','No','Parcial'], value:m.se_midio },
-    { key:'observaciones', label:'Observaciones', type:'textarea', value:m.observaciones || '' },
-  ]});
+  const cambios = await openFormModal({ title:m.nombre, fields:camposMel(m) });
   if(!cambios) return;
   try{
     await apiPost({ action:'updateMEL', id, cambios, token: TOKEN });
@@ -1558,13 +1600,7 @@ async function abrirEdicionMelAdmin(id){
 window.abrirEdicionMelAdmin = abrirEdicionMelAdmin;
 async function crearMelAdmin(){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
-  const cambios = await openFormModal({ title:'Nuevo indicador MEL', fields:[
-    { key:'nombre', label:'Nombre del indicador', type:'textarea', value:'' },
-    { key:'periodicidad', label:'Periodicidad', type:'select', options:MEL_PERIODICIDADES, value:'Trimestral' },
-    { key:'corresponde_medicion', label:'Corresponde medición este período', type:'checkbox', value:true },
-    { key:'se_midio', label:'¿Se midió?', type:'select', options:['Sí','No','Parcial'], value:'No' },
-    { key:'observaciones', label:'Observaciones', type:'textarea', value:'' },
-  ]});
+  const cambios = await openFormModal({ title:'Nuevo indicador MEL', fields:camposMel({}) });
   if(!cambios) return;
   if(!cambios.nombre){ toast('El nombre es obligatorio.'); return; }
   try{
@@ -1613,16 +1649,14 @@ function wireView(){
     };
     buscar.addEventListener('input', applyProd); fObj.addEventListener('change', applyProd); fEst.addEventListener('change', applyProd);
   }
-  const fMelP = document.getElementById('fMelPeriodicidad'), fMelE = document.getElementById('fMelEstado');
+  const fMelP = document.getElementById('fMelPeriodicidad');
   if(fMelP){
     const applyMel = () => {
-      document.querySelectorAll('#tablaMel tbody tr').forEach(tr => {
-        const okP = !fMelP.value || tr.dataset.periodicidad === fMelP.value;
-        const okE = !fMelE.value || tr.dataset.medido === fMelE.value;
-        tr.style.display = (okP && okE) ? '' : 'none';
+      document.querySelectorAll('#melTablas tbody tr[data-periodicidad]').forEach(tr => {
+        tr.style.display = (!fMelP.value || tr.dataset.periodicidad === fMelP.value) ? '' : 'none';
       });
     };
-    fMelP.addEventListener('change', applyMel); fMelE.addEventListener('change', applyMel);
+    fMelP.addEventListener('change', applyMel);
   }
   const fAT = document.getElementById('fAlertaTipo'), fAS = document.getElementById('fAlertaSeveridad');
   if(fAT){
