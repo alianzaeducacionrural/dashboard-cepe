@@ -222,6 +222,7 @@
     </div>
   </div>
   <div class="actions">
+    <select id="filtroMesGlobal" class="btn" style="cursor:pointer; font-weight:600;"></select>
     <span class="btn" id="corteLabel" style="cursor:default;"></span>
     <button class="btn" id="refreshBtn" onclick="cargarDatos()"></button>
     <button class="btn" id="themeToggle"></button>
@@ -395,6 +396,7 @@ async function cargarDatos(){
     DATA.dashboard = dashboard;
     reconstruirInfoAdicional(todo.infoAdicional);
     PRIMERA_CARGA = false;
+    renderFiltroMesGlobal();
     renderTabs(); renderView();
   }catch(err){
     if(!PRIMERA_CARGA){ toast('No se pudo actualizar: ' + err.message); return; }
@@ -536,6 +538,44 @@ function adminEditBtn(fnName, ...args){
   return ` <button class="btn" style="padding:3px 8px; font-size:10px; background:var(--tierra-suave); color:var(--tierra); border-color:transparent;" onclick="${fnName}(${argsStr})">${icon('pencil',{size:11})}editar</button>`;
 }
 
+/**
+ * Filtro global de mes (botón en el header): acota Cronograma/Vista mensual a los
+ * meses hasta el elegido, y en MEL anota el avance acumulado hasta ese trimestre
+ * — sin recalcular el semáforo oficial, que sigue viniendo tal cual del backend
+ * (el frontend no tiene motor de reglas propio, ver CLAUDE.md). En pestañas sin
+ * desglose mensual (Finanzas, Beneficiarios, Dashboard) solo se avisa que se
+ * muestra el valor más reciente, porque no existe un histórico mes a mes.
+ */
+let FILTRO_MES_GLOBAL = null;
+function mesMaximoConInformacion_(){
+  // Último mes con avance real marcado (cualquier estado distinto de "no iniciado"):
+  // los meses futuros ya están programados pero aún no tienen información cargada.
+  let max = 0;
+  [...DATA.productos, ...DATA.actividades].forEach(item => {
+    Object.entries(item.estados_mensuales || {}).forEach(([k, estado]) => {
+      const m = Number(k);
+      if(estado !== 'no_iniciado' && m > max) max = m;
+    });
+  });
+  return max || CONFIG.mesActual;
+}
+function renderFiltroMesGlobal(){
+  const sel = document.getElementById('filtroMesGlobal');
+  const maxMes = mesMaximoConInformacion_();
+  if(FILTRO_MES_GLOBAL && FILTRO_MES_GLOBAL > maxMes) FILTRO_MES_GLOBAL = null;
+  const opciones = ['<option value="">Todos los meses</option>']
+    .concat(CONFIG.meses.slice(0, maxMes).map((m,i) => `<option value="${i+1}">Hasta ${m}</option>`));
+  sel.innerHTML = opciones.join('');
+  sel.value = FILTRO_MES_GLOBAL || '';
+}
+function bannerFiltroMesGlobal_(){
+  if(!FILTRO_MES_GLOBAL) return '';
+  const nombreMes = CONFIG.meses[FILTRO_MES_GLOBAL - 1];
+  return `<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; background:var(--tierra-suave); color:var(--tierra); border:1px solid var(--tierra); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:16px; font-size:12px;">
+    <span style="display:flex; align-items:center; gap:8px;">${icon('calendar',{size:14})}Mostrando información hasta <strong>${nombreMes}</strong>. Cronograma, Vista mensual e Indicadores MEL reflejan este corte; Finanzas, Beneficiarios y el Dashboard muestran el valor más reciente porque no tienen historial mes a mes.</span>
+    <button class="btn" style="padding:4px 10px; font-size:11px;" onclick="document.getElementById('filtroMesGlobal').value=''; FILTRO_MES_GLOBAL=null; renderView();">Quitar filtro</button>
+  </div>`;
+}
 function renderTabs(){
   const nav = document.getElementById('tabs');
   const visibleTabs = ADMIN_MODE ? [...TABS, ADMIN_TAB] : TABS;
@@ -547,7 +587,7 @@ function renderView(){
   const app = document.getElementById('app');
   const renderers = { dashboard:viewDashboard, productos:viewProductos, cronograma:viewCronograma, mensual:viewMensual, mel:viewMEL, beneficiarios:viewBeneficiarios, finanzas:viewFinanzas, alertas:viewAlertas, admin:viewAdmin };
   if(currentTab === 'admin' && !ADMIN_MODE) currentTab = 'dashboard';
-  app.innerHTML = `<div class="view active">${renderers[currentTab]()}</div>`;
+  app.innerHTML = `<div class="view active">${bannerFiltroMesGlobal_()}${renderers[currentTab]()}</div>`;
   wireView();
 }
 
@@ -795,14 +835,15 @@ function filaActividad(a, prodId){
 const COLOR_MES_SOLID = { no_iniciado: 'var(--gris-sem)', en_proceso: 'var(--amarillo-sem)', atrasado: 'var(--rojo)', realizado: 'var(--verde)' };
 function viewCronograma(){
   const objetivos = DATA.objetivos;
-  const colspanMeses = CONFIG.meses.length;
+  const mesesVisibles = FILTRO_MES_GLOBAL ? CONFIG.meses.slice(0, FILTRO_MES_GLOBAL) : CONFIG.meses;
+  const colspanMeses = mesesVisibles.length;
   const filas = [];
   // El calendario sale SOLO de estados_mensuales (un mes está programado si tiene clave,
   // sin asumir meses corridos), sin importar cómo se mida el avance del ítem: así el
   // Cronograma y los datos del producto/actividad no se pisan entre sí.
   const ganttBar = (item, tipo, small, editable) => {
     const estados = item.estados_mensuales || {};
-    return CONFIG.meses.map((m,i)=>{
+    return mesesVisibles.map((m,i)=>{
       const mes = i+1;
       const estado = estados[mes] || estados[String(mes)];
       if(ADMIN_MODE && editable){
@@ -836,7 +877,7 @@ function viewCronograma(){
     });
     return mejor;
   };
-  const ganttBarConsolidado = (producto, actividadesDelProducto) => CONFIG.meses.map((m,i) => {
+  const ganttBarConsolidado = (producto, actividadesDelProducto) => mesesVisibles.map((m,i) => {
     const mes = i+1;
     const estado = estadoConsolidadoMes_(actividadesDelProducto, mes);
     if(!estado) return `<td class="cell"></td>`;
@@ -855,7 +896,7 @@ function viewCronograma(){
     });
   });
   return `
-  <div class="section-title">${icon('calendar',{size:20,color:'var(--tierra)'})}Cronograma (marzo – noviembre 2026)</div>
+  <div class="section-title">${icon('calendar',{size:20,color:'var(--tierra)'})}Cronograma (marzo – noviembre 2026)${FILTRO_MES_GLOBAL?` · hasta ${CONFIG.meses[FILTRO_MES_GLOBAL-1]}`:''}</div>
   <p class="muted" style="font-size:12.5px;">Agrupado por objetivo. Cada producto muestra sus actividades (cuando existen) como sub-filas, cada una con su propio rango de meses y estado.${ADMIN_MODE?' Clic en cualquier celda abre una ventana para gestionar ese mes: programarlo, cambiar su estado o quitarlo.':''}</p>
   <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:14px; padding:10px 14px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm);">
     ${['no_iniciado','en_proceso','atrasado','realizado'].map(e=>`
@@ -868,7 +909,7 @@ function viewCronograma(){
   </div>
   <div class="gantt">
     <table>
-      <thead><tr><th style="min-width:240px;">Producto / actividad</th>${CONFIG.meses.map((m,i)=>`<th class="month">${m}</th>`).join('')}</tr></thead>
+      <thead><tr><th style="min-width:240px;">Producto / actividad</th>${mesesVisibles.map((m,i)=>`<th class="month">${m}</th>`).join('')}</tr></thead>
       <tbody>${filas.join('')}</tbody>
     </table>
   </div>`;
@@ -964,7 +1005,7 @@ function viewMensual(){
   <div class="section-title">${icon('calendar',{size:20,color:'var(--tierra)'})}Vista mensual</div>
   <p class="muted" style="font-size:12.5px;">Elige un mes para ver todo lo que estaba programado en él (productos y actividades programados en él).</p>
   <div class="admin-subnav">
-    ${CONFIG.meses.map((m,i)=>`<button class="${i+1===mes?'active':''}" onclick="seleccionarMes(${i+1})">${m}</button>`).join('')}
+    ${CONFIG.meses.slice(0, mesMaximoConInformacion_()).map((m,i)=>`<button class="${i+1===mes?'active':''}" onclick="seleccionarMes(${i+1})">${m}</button>`).join('')}
   </div>
   <div style="margin-top:6px;">
     ${bloques.length ? bloques.join('') : '<div class="empty">Nada programado para este mes.</div>'}
@@ -1025,6 +1066,11 @@ function viewMEL(){
 }
 function filaMel(m){
   const trimestres = [['Q1','avance_q1'],['Q2','avance_q2'],['Q3','avance_q3'],['Q4','avance_q4']];
+  // El filtro de mes del header solo anota cuánto se había logrado hasta ese trimestre
+  // (suma informativa de Q1..Qn) — el semáforo (m.color/m.pct_esperado) sigue siendo
+  // el oficial calculado por el backend, no se recalcula aquí.
+  const trimestreFiltro = FILTRO_MES_GLOBAL ? Math.min(4, Math.ceil((FILTRO_MES_GLOBAL + 2) / 3)) : null;
+  const avanceHastaFiltro = trimestreFiltro ? Math.round(trimestres.slice(0, trimestreFiltro).reduce((s,[,k])=>s+(m[k]||0),0)*10)/10 : null;
   return `<tr data-periodicidad="${esc(m.periodicidad)}">
     <td style="min-width:230px;">
       <div style="font-weight:600;">${esc(m.nombre)}</div>
@@ -1038,8 +1084,9 @@ function filaMel(m){
     <td style="min-width:210px;">
       <div class="prog-track"><div class="prog-fill" style="transform:scaleX(${scaleX(m.pct_avance)}); background:${colorHex(m.color)}"></div><div class="prog-marker" style="left:${Math.min(100,m.pct_esperado)}%"></div></div>
       <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--text-muted); margin-top:4px;"><span>Avance: <strong>${m.pct_avance}%</strong></span><span>Esperado: ${m.pct_esperado}%</span></div>
+      ${trimestreFiltro ? `<div class="muted" style="font-size:10px; margin-top:3px;">Acumulado hasta ${esc(CONFIG.meses[FILTRO_MES_GLOBAL-1])} (Q${trimestreFiltro}): <strong>${avanceHastaFiltro}%</strong></div>` : ''}
       <div style="display:flex; gap:3px; margin-top:7px;">
-        ${trimestres.map(([label,key])=>`<div style="flex:1; text-align:center;" title="${label}: ${m[key]}% de la meta"><div style="height:6px; border-radius:3px; background:${m[key]>0?colorHex(m.color):'var(--border)'}; opacity:${m[key]>0?(0.45+Math.min(0.55,m[key]/100)):0.3};"></div><div style="font-size:8.5px; color:var(--text-tertiary); margin-top:2px;">${label}</div></div>`).join('')}
+        ${trimestres.map(([label,key],i)=>`<div style="flex:1; text-align:center; ${trimestreFiltro && i>=trimestreFiltro?'opacity:.35;':''}" title="${label}: ${m[key]}% de la meta${trimestreFiltro && i>=trimestreFiltro?' (fuera del filtro actual)':''}"><div style="height:6px; border-radius:3px; background:${m[key]>0?colorHex(m.color):'var(--border)'}; opacity:${m[key]>0?(0.45+Math.min(0.55,m[key]/100)):0.3};"></div><div style="font-size:8.5px; color:var(--text-tertiary); margin-top:2px;">${label}</div></div>`).join('')}
       </div>
     </td>
     <td class="obs-text" style="max-width:280px;">${esc(m.observaciones)}</td>
@@ -1756,6 +1803,10 @@ document.getElementById('brandLogo').innerHTML = icon('mountain', { size: 24, co
 document.getElementById('adminModalTitle').innerHTML = icon('lockClosed',{size:18,color:'var(--tierra)'}) + 'Acceso panel admin';
 document.getElementById('corteLabel').innerHTML = icon('calendar',{size:14}) + `Corte: ${CONFIG.corte}`;
 document.getElementById('refreshBtn').innerHTML = icon('refresh',{size:15}) + 'Actualizar';
+document.getElementById('filtroMesGlobal').addEventListener('change', (e) => {
+  FILTRO_MES_GLOBAL = e.target.value ? Number(e.target.value) : null;
+  renderView();
+});
 renderTabs();
 initTheme(); initAdmin(); cargarDatos();
 </script>
