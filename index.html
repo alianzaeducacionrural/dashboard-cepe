@@ -1122,10 +1122,23 @@ function viewBeneficiarios(){
     </div>
   </div>
   <div class="card" style="margin-top:16px;">
-    <h3>Distribución por institución educativa (estudiantes 2026)</h3>
-    <div class="table-wrap"><table><thead><tr><th>Institución</th><th>Estudiantes 2026</th></tr></thead>
-    <tbody>${[...DATA.instituciones].sort((a,b2)=>b2.estudiantes_2026-a.estudiantes_2026).map(i=>`<tr><td>${esc(i.nombre)}</td><td>${barMini(i.estudiantes_2026,40)}</td></tr>`).join('')}</tbody></table></div>
+    <h3>Beneficiarios por institución</h3>
+    ${tablaBeneficiariosPorInstitucion()}
   </div>`;
+}
+const COLS_BENEF_IE = [['estudiantes_2026','Estudiantes'],['docentes','Docentes'],['directivos','Directivos docentes'],['acudientes','Acudientes']];
+function tablaBeneficiariosPorInstitucion(){
+  // Los periodos congelados anteriores a septiembre solo traen estudiantes: las demás columnas quedan en "—".
+  const val = (i,k) => (i[k] === undefined || i[k] === null || i[k] === '') ? null : Number(i[k]);
+  const fmt = v => v === null ? '—' : v;
+  const totalFila = i => COLS_BENEF_IE.reduce((s,[k])=>s+(val(i,k)||0),0);
+  const filas = [...DATA.instituciones].sort((a,b) => (val(b,'estudiantes_2026')||0)-(val(a,'estudiantes_2026')||0) || totalFila(b)-totalFila(a));
+  const sumaCol = k => filas.some(i=>val(i,k)!==null) ? filas.reduce((s,i)=>s+(val(i,k)||0),0) : null;
+  const num = 'text-align:right; font-variant-numeric:tabular-nums;';
+  return `<div class="table-wrap"><table><thead><tr><th>Institución</th>${COLS_BENEF_IE.map(([,l])=>`<th style="text-align:right;">${l}</th>`).join('')}<th style="text-align:right;">Total</th></tr></thead>
+    <tbody>${filas.map(i=>`<tr><td>${esc(i.nombre)}${i.sede==='Universidad aliada'?' <span class="muted" style="font-size:11px;">(universidad)</span>':''}</td>${COLS_BENEF_IE.map(([k])=>`<td style="${num}">${fmt(val(i,k))}</td>`).join('')}<td style="${num} font-weight:600;">${totalFila(i)}</td></tr>`).join('')}
+    <tr style="font-weight:700;"><td>TOTAL</td>${COLS_BENEF_IE.map(([k])=>`<td style="${num}">${fmt(sumaCol(k))}</td>`).join('')}<td style="${num}">${filas.reduce((s,i)=>s+totalFila(i),0)}</td></tr>
+    </tbody></table></div>`;
 }
 const BENEF_LABELS = { estudiantes:'Estudiantes', docentes:'Docentes', directivos:'Directivos docentes', adolescencia_13_17:'Adolescencia (13-17 años)', juventud_18_28:'Juventud (18-28 años)', acudientes:'Acudientes' };
 async function abrirEdicionBeneficiario(categoria){
@@ -1166,10 +1179,6 @@ async function abrirEdicionInfoAdicionalAdmin(){
   }catch(err){ toast('Error: '+err.message); }
 }
 window.abrirEdicionInfoAdicionalAdmin = abrirEdicionInfoAdicionalAdmin;
-function barMini(v, max){
-  const pct = Math.min(100, v/max*100);
-  return `<div style="display:flex; align-items:center; gap:8px;"><div style="width:100px; height:10px; background:var(--border); border-radius:5px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--azul-claro);"></div></div><span style="font-size:12px;">${v}</span></div>`;
-}
 
 /* ===================== FINANZAS ===================== */
 function viewFinanzas(){
@@ -1177,7 +1186,6 @@ function viewFinanzas(){
   const porFuente = DATA.finanzas.por_fuente;
   const totalPresup = porObjetivo.reduce((s,f)=>s+Number(f.presupuestado||0),0);
   const totalEjec = porObjetivo.reduce((s,f)=>s+Number(f.ejecutado||0),0);
-  const totalFuente = porFuente.reduce((s,f)=>s+Number(f.ejecutado||0),0);
   return `
   <div class="section-title">${icon('wallet',{size:20,color:'var(--tierra)'})}Finanzas</div>
   <div class="grid kpis">
@@ -1194,9 +1202,9 @@ function viewFinanzas(){
     </div>
     <div class="card">
       <h3>Desglose por fuente de financiación</h3>
-      ${porFuente.map(f => barRow(f.fuente, f.ejecutado/totalFuente*100, 'var(--azul)')).join('')}
-      <table style="margin-top:10px;"><thead><tr><th>Fuente</th><th>Ejecutado</th><th>Convenio / detalle</th>${ADMIN_MODE?'<th></th>':''}</tr></thead>
-      <tbody>${porFuente.map(f=>`<tr><td style="font-size:11.5px;">${esc(f.fuente)}</td><td>${fmtCOP(f.ejecutado)}</td><td class="obs-text">${esc(f.detalle)}</td>${ADMIN_MODE?`<td>${adminEditBtn('abrirEdicionFinanza', f.id)}</td>`:''}</tr>`).join('')}</tbody></table>
+      ${porFuente.map(f => barRow(f.fuente, f.ejecutado/f.presupuestado*100, f.ejecutado/f.presupuestado>=1?'var(--azul-sem)':f.ejecutado/f.presupuestado>=0.5?'var(--verde)':'var(--amarillo-sem)')).join('')}
+      <table style="margin-top:10px;"><thead><tr><th>Fuente</th><th>Presupuestado</th><th>Ejecutado</th><th>Convenio / detalle</th>${ADMIN_MODE?'<th></th>':''}</tr></thead>
+      <tbody>${porFuente.map(f=>`<tr><td style="font-size:11.5px;">${esc(f.fuente)}</td><td>${fmtCOP(f.presupuestado)}</td><td>${fmtCOP(f.ejecutado)}</td><td class="obs-text">${esc(f.detalle)}</td>${ADMIN_MODE?`<td>${adminEditBtn('abrirEdicionFinanza', f.id)}</td>`:''}</tr>`).join('')}</tbody></table>
     </div>
   </div>
   <div class="card" style="margin-top:16px;">
@@ -1244,11 +1252,12 @@ window.abrirEdicionTalento = abrirEdicionTalento;
 function adminTablaInstituciones(){
   const instituciones = DATA.instituciones;
   const totalEst26 = instituciones.reduce((s,i)=>s+(Number(i.estudiantes_2026)||0),0);
+  const sumar = k => instituciones.reduce((s,i)=>s+(Number(i[k])||0),0);
   return `
   <div style="margin-bottom:12px;"><button class="btn primary" onclick="crearInstitucionAdmin()">${icon('plus',{size:13})}Agregar institución</button></div>
-  <div class="table-wrap"><table><thead><tr><th>Institución</th><th>Sede</th><th>Estudiantes 2026</th><th></th></tr></thead>
-  <tbody>${instituciones.map(i=>`<tr><td>${esc(i.nombre)}</td><td>${esc(i.sede)}</td><td>${i.estudiantes_2026??'—'}</td><td style="white-space:nowrap;">${adminEditBtn('abrirEdicionInstitucionAdmin', i.id)} ${btnEliminar('eliminarInstitucionAdmin', i.id)}</td></tr>`).join('')}
-  <tr style="font-weight:700;"><td>TOTAL</td><td></td><td>${totalEst26}</td><td></td></tr>
+  <div class="table-wrap"><table><thead><tr><th>Institución</th><th>Sede</th><th>Estudiantes 2026</th><th>Docentes</th><th>Directivos</th><th>Acudientes</th><th></th></tr></thead>
+  <tbody>${instituciones.map(i=>`<tr><td>${esc(i.nombre)}</td><td>${esc(i.sede)}</td><td>${i.estudiantes_2026??'—'}</td><td>${i.docentes??'—'}</td><td>${i.directivos??'—'}</td><td>${i.acudientes??'—'}</td><td style="white-space:nowrap;">${adminEditBtn('abrirEdicionInstitucionAdmin', i.id)} ${btnEliminar('eliminarInstitucionAdmin', i.id)}</td></tr>`).join('')}
+  <tr style="font-weight:700;"><td>TOTAL</td><td></td><td>${totalEst26}</td><td>${sumar('docentes')}</td><td>${sumar('directivos')}</td><td>${sumar('acudientes')}</td><td></td></tr>
   </tbody></table></div>`;
 }
 async function abrirEdicionInstitucionAdmin(id){
@@ -1258,9 +1267,12 @@ async function abrirEdicionInstitucionAdmin(id){
     { key:'nombre', label:'Nombre', type:'text', value:i.nombre },
     { key:'sede', label:'Sede', type:'text', value:i.sede || '' },
     { key:'estudiantes_2026', label:'Estudiantes 2026', type:'number', value:i.estudiantes_2026 || 0 },
+    { key:'docentes', label:'Docentes', type:'number', value:i.docentes || 0 },
+    { key:'directivos', label:'Directivos docentes', type:'number', value:i.directivos || 0 },
+    { key:'acudientes', label:'Acudientes', type:'number', value:i.acudientes || 0 },
   ]});
   if(!cambios) return;
-  if(Number.isNaN(cambios.estudiantes_2026)){ toast('Valor inválido.'); return; }
+  if(['estudiantes_2026','docentes','directivos','acudientes'].some(k=>Number.isNaN(cambios[k]))){ toast('Valor inválido.'); return; }
   try{
     await apiPost({ action:'updateInstitucion', id, cambios, token: TOKEN });
     toast('Institución actualizada.');
@@ -1274,6 +1286,9 @@ async function crearInstitucionAdmin(){
     { key:'nombre', label:'Nombre', type:'text', value:'' },
     { key:'sede', label:'Sede', type:'text', value:'' },
     { key:'estudiantes_2026', label:'Estudiantes 2026', type:'number', value:0 },
+    { key:'docentes', label:'Docentes', type:'number', value:0 },
+    { key:'directivos', label:'Directivos docentes', type:'number', value:0 },
+    { key:'acudientes', label:'Acudientes', type:'number', value:0 },
   ]});
   if(!cambios) return;
   if(!cambios.nombre){ toast('El nombre es obligatorio.'); return; }

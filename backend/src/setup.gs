@@ -20,7 +20,7 @@ function crearHojas() {
   asegurarHojaConEncabezados_(CONFIG.SHEETS.INDICADORES_MEL, ['id', 'objetivo_id', 'nombre', 'tipo', 'periodicidad', 'meta', 'linea_base', 'avance_q1', 'avance_q2', 'avance_q3', 'avance_q4', 'observaciones']);
   asegurarHojaConEncabezados_(CONFIG.SHEETS.BENEFICIARIOS, ['id', 'tipo', 'genero', 'institucion', 'universidad', 'programa', 'estado', 'anio']);
   asegurarHojaConEncabezados_(CONFIG.SHEETS.BENEFICIARIOS_RESUMEN, ['categoria', 'mujeres', 'hombres']);
-  asegurarHojaConEncabezados_(CONFIG.SHEETS.INSTITUCIONES, ['id', 'nombre', 'sede', 'estudiantes_2026', 'estudiantes_2027']);
+  asegurarHojaConEncabezados_(CONFIG.SHEETS.INSTITUCIONES, ['id', 'nombre', 'sede', 'estudiantes_2026', 'estudiantes_2027', 'docentes', 'directivos', 'acudientes']);
   asegurarHojaConEncabezados_(CONFIG.SHEETS.FINANZAS, ['id', 'tipo', 'objetivo_id', 'label', 'presupuestado', 'ejecutado', 'fuente', 'detalle']);
   asegurarHojaConEncabezados_(CONFIG.SHEETS.TALENTO_HUMANO, ['id', 'rol', 'valor_mes', 'meses', 'dedicacion', 'pct_ejecutado', 'valor_ejecutado']);
   asegurarHojaConEncabezados_(CONFIG.SHEETS.ALERTAS, ['id', 'tipo', 'severidad', 'descripcion', 'producto_id', 'indicador_id', 'fecha', 'estado', 'accion']);

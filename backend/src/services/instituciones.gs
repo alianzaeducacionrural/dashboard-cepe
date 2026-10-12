@@ -18,6 +18,9 @@ const InstitucionesService = {
       sede: body.sede || '',
       estudiantes_2026: body.estudiantes_2026 || 0,
       estudiantes_2027: body.estudiantes_2027 || 0,
+      docentes: body.docentes || 0,
+      directivos: body.directivos || 0,
+      acudientes: body.acudientes || 0,
     };
     agregarFila_(CONFIG.SHEETS.INSTITUCIONES, institucion);
     registrarLog_('createInstitucion', institucion);
