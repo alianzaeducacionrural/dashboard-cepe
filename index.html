@@ -69,6 +69,8 @@
   header.top h1{font-family:var(--font-display); font-weight:700; font-size:18px; margin:0; line-height:1.3; letter-spacing:-.01em;}
   header.top .sub{font-size:11.5px; opacity:.82; margin-top:3px;}
   header.top .actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  /* La lista desplegable nativa hereda el texto blanco del header; se le da el color de la página. */
+  header.top select option{color:var(--text); background:var(--card); font-weight:500;}
   .btn{
     background:rgba(255,255,255,.13); color:#fff; border:1px solid rgba(255,255,255,.28);
     padding:8px 13px; border-radius:var(--radius-sm); cursor:pointer; font-size:12.5px; font-weight:600;
