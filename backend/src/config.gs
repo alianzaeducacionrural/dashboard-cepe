@@ -23,10 +23,10 @@ const CONFIG = {
   },
   // Mes actual del proyecto para el cálculo de semáforos (Mar=1 ... Nov=9).
   // Se actualiza manualmente cada mes hasta que se automatice con fecha real.
-  MES_ACTUAL: 6, // Agosto 2026
+  MES_ACTUAL: 7, // Septiembre 2026
   // Fecha de corte de los datos (no la fecha en que se calcula la alerta).
   // Actualízala junto con MES_ACTUAL cada mes.
-  FECHA_CORTE: '2026-08-31',
+  FECHA_CORTE: '2026-09-30',
 };
 
 function getSpreadsheet_() {

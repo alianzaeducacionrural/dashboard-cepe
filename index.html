@@ -222,6 +222,10 @@
     </div>
   </div>
   <div class="actions">
+    <select id="periodoSel" class="btn" style="cursor:pointer; font-weight:600;" aria-label="Periodo a consultar">
+      <option value="marzo-agosto">Marzo - Agosto</option>
+      <option value="actual" selected>Septiembre</option>
+    </select>
     <span class="btn" id="corteLabel" style="cursor:default;"></span>
     <button class="btn" id="refreshBtn" onclick="cargarDatos()"></button>
     <button class="btn" id="themeToggle"></button>
@@ -261,9 +265,9 @@
 <script>
 /* ===================== CONFIG ===================== */
 const CONFIG = {
-  corte: '31 de agosto de 2026',
+  corte: '30 de septiembre de 2026',
   meses: ['Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov'],
-  mesActual: 6, // Agosto 2026 — debe coincidir con CONFIG.MES_ACTUAL del backend (config.gs)
+  mesActual: 7, // Septiembre 2026 — debe coincidir con CONFIG.MES_ACTUAL del backend (config.gs)
 };
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwotPl5-4emxwGODOGrBUVtOvhhxny4pfHDu-hyViSh43IgfDTdZSR_BAXXO62pdTJJ_g/exec';
@@ -378,12 +382,32 @@ async function apiPost(body){
  * optimista en pantalla, un refresco no debe taparlo con un spinner ni con un
  * teardown completo — solo corrige los datos y, si falla, avisa con un toast.
  */
+/**
+ * Periodos: "actual" lee el backend en vivo (acumulado a la fecha); los periodos
+ * cerrados son una copia congelada de los datos al cierre (periodos/<id>.json), así
+ * se ve exactamente lo que se reportó entonces aunque el Sheet ya haya avanzado.
+ * El panel admin siempre trabaja sobre "actual", porque solo ahí se puede editar.
+ */
+let PERIODO = 'actual';
+const CONFIG_ACTUAL = { corte: CONFIG.corte, mesActual: CONFIG.mesActual };
+async function obtenerDatosPeriodo_(){
+  if(ADMIN_MODE) PERIODO = 'actual';
+  if(PERIODO === 'actual'){
+    Object.assign(CONFIG, CONFIG_ACTUAL);
+    return Promise.all([apiGet('getAll'), apiGet('getDashboard')]);
+  }
+  const res = await fetch(`periodos/${PERIODO}.json`);
+  if(!res.ok) throw new Error('No se encontró la información de ese periodo.');
+  const snap = await res.json();
+  Object.assign(CONFIG, { corte: snap.corte, mesActual: snap.mesActual });
+  return [snap.todo, snap.dashboard];
+}
 let PRIMERA_CARGA = true;
 async function cargarDatos(){
   const app = document.getElementById('app');
   if(PRIMERA_CARGA) app.innerHTML = '<div class="empty"><div class="loader-ring"></div>Cargando información…</div>';
   try{
-    const [todo, dashboard] = await Promise.all([apiGet('getAll'), apiGet('getDashboard')]);
+    const [todo, dashboard] = await obtenerDatosPeriodo_();
     DATA.objetivos = todo.objetivos;
     DATA.productos = todo.productos;
     DATA.actividades = todo.actividades;
@@ -395,6 +419,10 @@ async function cargarDatos(){
     DATA.dashboard = dashboard;
     reconstruirInfoAdicional(todo.infoAdicional);
     PRIMERA_CARGA = false;
+    document.getElementById('corteLabel').innerHTML = icon('calendar',{size:14}) + `Corte: ${CONFIG.corte}`;
+    const periodoSel = document.getElementById('periodoSel');
+    periodoSel.value = PERIODO;
+    periodoSel.style.display = ADMIN_MODE ? 'none' : '';
     renderTabs(); renderView();
   }catch(err){
     if(!PRIMERA_CARGA){ toast('No se pudo actualizar: ' + err.message); return; }
@@ -560,7 +588,7 @@ function viewDashboard(){
   const activas = alertas.filter(a => a.estado === 'activa');
   const topAlertas = activas.slice(0,4);
   const resumen = DATA.beneficiarios.resumen || {};
-  const totalBenef = sumaResumen(resumen,'estudiantes') + sumaResumen(resumen,'docentes') + sumaResumen(resumen,'directivos');
+  const totalBenef = sumaResumen(resumen,'estudiantes') + sumaResumen(resumen,'docentes') + sumaResumen(resumen,'directivos') + sumaResumen(resumen,'acudientes');
   const totalPresup = d.total_presupuestado;
   const totalEjec = d.total_ejecutado;
   const tecnicoColor = d.avance_tecnico>=70?'var(--verde)':d.avance_tecnico>=40?'var(--amarillo-sem)':'var(--rojo)';
@@ -676,7 +704,8 @@ function beneficiariosMiniStrip(resumen){
     ['estudiantes','Estudiantes','var(--azul-claro)'],
     ['docentes','Docentes','var(--tierra)'],
     ['directivos','Directivos','var(--amarillo-sem)'],
-  ];
+    ['acudientes','Acudientes','var(--verde)'],
+  ].filter(([key]) => resumen[key]);
   const total = cats.reduce((s,[key])=>s+sumaResumen(resumen,key),0) || 1;
   const segs = cats.map(([key,,color])=>{
     const n = sumaResumen(resumen,key); const pct = n/total*100;
@@ -1052,6 +1081,7 @@ function viewBeneficiarios(){
   const est = r.estudiantes || { mujeres:0, hombres:0 };
   const doc = r.docentes || { mujeres:0, hombres:0 };
   const dir = r.directivos || { mujeres:0, hombres:0 };
+  const acu = r.acudientes;
   const adol = r.adolescencia_13_17 || { mujeres:0, hombres:0 };
   const juv = r.juventud_18_28 || { mujeres:0, hombres:0 };
   const totalEst = Number(est.mujeres||0) + Number(est.hombres||0);
@@ -1067,6 +1097,7 @@ function viewBeneficiarios(){
     <div class="card kpi"><h3>Estudiantes${adminEditBtn('abrirEdicionBeneficiario', 'estudiantes')}</h3><div class="value">${totalEst}</div><div class="label">${est.mujeres} mujeres · ${est.hombres} hombres</div></div>
     <div class="card kpi"><h3>Docentes${adminEditBtn('abrirEdicionBeneficiario', 'docentes')}</h3><div class="value">${totalDoc}</div><div class="label">${doc.mujeres} mujeres · ${doc.hombres} hombres</div></div>
     <div class="card kpi"><h3>Directivos docentes${adminEditBtn('abrirEdicionBeneficiario', 'directivos')}</h3><div class="value">${totalDir}</div><div class="label">${dir.mujeres} mujeres · ${dir.hombres} hombres</div></div>
+    ${acu ? `<div class="card kpi"><h3>Acudientes${adminEditBtn('abrirEdicionBeneficiario', 'acudientes')}</h3><div class="value">${Number(acu.mujeres||0) + Number(acu.hombres||0)}</div><div class="label">${acu.mujeres} mujeres · ${acu.hombres} hombres</div></div>` : ''}
     <div class="card kpi"><h3>Deserción${adminEditBtn('abrirEdicionInfoAdicionalAdmin')}</h3><div class="value" style="color:${pctDesercion>5?'var(--rojo)':'var(--verde)'}">${pctDesercion}%</div><div class="label">${desc.cantidad} de ${desc.base} estudiantes matriculados</div></div>
   </div>
   <div class="grid cols2" style="margin-top:16px;">
@@ -1094,7 +1125,7 @@ function viewBeneficiarios(){
     <tbody>${[...DATA.instituciones].sort((a,b2)=>b2.estudiantes_2026-a.estudiantes_2026).map(i=>`<tr><td>${esc(i.nombre)}</td><td>${barMini(i.estudiantes_2026,40)}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
 }
-const BENEF_LABELS = { estudiantes:'Estudiantes', docentes:'Docentes', directivos:'Directivos docentes', adolescencia_13_17:'Adolescencia (13-17 años)', juventud_18_28:'Juventud (18-28 años)' };
+const BENEF_LABELS = { estudiantes:'Estudiantes', docentes:'Docentes', directivos:'Directivos docentes', adolescencia_13_17:'Adolescencia (13-17 años)', juventud_18_28:'Juventud (18-28 años)', acudientes:'Acudientes' };
 async function abrirEdicionBeneficiario(categoria){
   if(!TOKEN){ toast('Debes iniciar sesión de administrador.'); return; }
   const actual = DATA.beneficiarios.resumen[categoria] || { mujeres:0, hombres:0 };
@@ -1756,6 +1787,12 @@ document.getElementById('brandLogo').innerHTML = icon('mountain', { size: 24, co
 document.getElementById('adminModalTitle').innerHTML = icon('lockClosed',{size:18,color:'var(--tierra)'}) + 'Acceso panel admin';
 document.getElementById('corteLabel').innerHTML = icon('calendar',{size:14}) + `Corte: ${CONFIG.corte}`;
 document.getElementById('refreshBtn').innerHTML = icon('refresh',{size:15}) + 'Actualizar';
+document.getElementById('periodoSel').addEventListener('change', async (e) => {
+  PERIODO = e.target.value;
+  await cargarDatos();
+  MES_SELECCIONADO = CONFIG.mesActual;
+  renderView();
+});
 renderTabs();
 initTheme(); initAdmin(); cargarDatos();
 </script>

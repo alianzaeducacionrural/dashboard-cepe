@@ -19,7 +19,12 @@ const BeneficiariosService = {
   /** BENEFICIARIOS_RESUMEN se identifica por "categoria" (estudiantes, docentes, ...), no por "id". */
   actualizar(body) {
     requireFields_(body, ['categoria', 'cambios']);
-    actualizarFilaPorCampo_(CONFIG.SHEETS.BENEFICIARIOS_RESUMEN, 'categoria', body.categoria, body.cambios);
+    // Categorías nuevas que aparecen en los reportes (p. ej. acudientes) se agregan como fila.
+    if (buscarPorCampo_(CONFIG.SHEETS.BENEFICIARIOS_RESUMEN, 'categoria', body.categoria)) {
+      actualizarFilaPorCampo_(CONFIG.SHEETS.BENEFICIARIOS_RESUMEN, 'categoria', body.categoria, body.cambios);
+    } else {
+      agregarFila_(CONFIG.SHEETS.BENEFICIARIOS_RESUMEN, Object.assign({ categoria: body.categoria }, body.cambios));
+    }
     registrarLog_('updateBeneficiarios', { categoria: body.categoria, cambios: body.cambios });
     return buscarPorCampo_(CONFIG.SHEETS.BENEFICIARIOS_RESUMEN, 'categoria', body.categoria);
   },
