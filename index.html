@@ -229,7 +229,8 @@
   <div class="actions">
     <div id="periodoSel" class="seg" role="group" aria-label="Periodo a consultar">
       <button type="button" data-periodo="marzo-agosto">Marzo - Agosto</button>
-      <button type="button" data-periodo="actual">Septiembre</button>
+      <button type="button" data-periodo="septiembre">Septiembre</button>
+      <button type="button" data-periodo="actual">Octubre</button>
     </div>
     <span class="btn" id="corteLabel" style="cursor:default;"></span>
     <button class="btn" id="refreshBtn" onclick="cargarDatos()"></button>
@@ -270,9 +271,9 @@
 <script>
 /* ===================== CONFIG ===================== */
 const CONFIG = {
-  corte: '30 de septiembre de 2026',
+  corte: '31 de octubre de 2026',
   meses: ['Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov'],
-  mesActual: 7, // Septiembre 2026 — debe coincidir con CONFIG.MES_ACTUAL del backend (config.gs)
+  mesActual: 8, // Octubre 2026 — debe coincidir con CONFIG.MES_ACTUAL del backend (config.gs)
 };
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwotPl5-4emxwGODOGrBUVtOvhhxny4pfHDu-hyViSh43IgfDTdZSR_BAXXO62pdTJJ_g/exec';
