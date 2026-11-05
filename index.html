@@ -430,8 +430,9 @@ async function cargarDatos(){
     periodoSel.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.periodo === PERIODO));
     periodoSel.style.display = ADMIN_MODE ? 'none' : '';
     renderTabs(); renderView();
+    return true;
   }catch(err){
-    if(!PRIMERA_CARGA){ toast('No se pudo actualizar: ' + err.message); return; }
+    if(!PRIMERA_CARGA){ toast('No se pudo actualizar: ' + err.message); return false; }
     app.innerHTML = `<div class="empty">${icon('alertTriangle',{size:28,color:'var(--rojo)'})}<div style="margin-top:8px;">No se pudo cargar la información.</div><span class="muted" style="font-size:11px;">${esc(err.message)}</span><br><br><button class="btn primary" onclick="cargarDatos()">${icon('refresh',{size:14})}Reintentar</button></div>`;
   }
 }
@@ -1811,8 +1812,10 @@ document.getElementById('refreshBtn').innerHTML = icon('refresh',{size:15}) + 'A
 document.getElementById('periodoSel').addEventListener('click', async (e) => {
   const b = e.target.closest('button[data-periodo]');
   if(!b || b.dataset.periodo === PERIODO) return;
+  const anterior = PERIODO;
   PERIODO = b.dataset.periodo;
-  await cargarDatos();
+  // Si la carga falla se vuelve al periodo anterior: si no, el botón quedaría "activo" sin datos y no dejaría reintentar.
+  if(!(await cargarDatos())){ PERIODO = anterior; return; }
   MES_SELECCIONADO = CONFIG.mesActual;
   renderView();
 });
