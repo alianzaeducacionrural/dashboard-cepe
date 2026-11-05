@@ -395,12 +395,15 @@ async function apiPost(body){
  * El panel admin siempre trabaja sobre "actual", porque solo ahí se puede editar.
  */
 let PERIODO = 'actual';
+// Última lectura en vivo: el backend tarda varios segundos, así que al volver a "actual" se pinta esto al instante y se refresca en segundo plano.
+let CACHE_ACTUAL = null;
 const CONFIG_ACTUAL = { corte: CONFIG.corte, mesActual: CONFIG.mesActual };
 async function obtenerDatosPeriodo_(){
   if(ADMIN_MODE) PERIODO = 'actual';
   if(PERIODO === 'actual'){
     Object.assign(CONFIG, CONFIG_ACTUAL);
-    return Promise.all([apiGet('getAll'), apiGet('getDashboard')]);
+    CACHE_ACTUAL = await Promise.all([apiGet('getAll'), apiGet('getDashboard')]);
+    return CACHE_ACTUAL;
   }
   const res = await fetch(`periodos/${PERIODO}.json`);
   if(!res.ok) throw new Error('No se encontró la información de ese periodo.');
@@ -413,7 +416,23 @@ async function cargarDatos(){
   const app = document.getElementById('app');
   if(PRIMERA_CARGA) app.innerHTML = '<div class="empty"><div class="loader-ring"></div>Cargando información…</div>';
   try{
+    const pedido = PERIODO;
     const [todo, dashboard] = await obtenerDatosPeriodo_();
+    if(PERIODO !== pedido) return true; // el usuario ya cambió de periodo mientras cargaba: no pisar lo que ve
+    pintarDatos_(todo, dashboard);
+    return true;
+  }catch(err){
+    if(!PRIMERA_CARGA){ toast('No se pudo actualizar: ' + err.message); return false; }
+    app.innerHTML = `<div class="empty">${icon('alertTriangle',{size:28,color:'var(--rojo)'})}<div style="margin-top:8px;">No se pudo cargar la información.</div><span class="muted" style="font-size:11px;">${esc(err.message)}</span><br><br><button class="btn primary" onclick="cargarDatos()">${icon('refresh',{size:14})}Reintentar</button></div>`;
+  }
+}
+function marcarPeriodo_(){
+  const periodoSel = document.getElementById('periodoSel');
+  periodoSel.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.periodo === PERIODO));
+  periodoSel.style.display = ADMIN_MODE ? 'none' : '';
+}
+function pintarDatos_(todo, dashboard){
+  {
     DATA.objetivos = todo.objetivos;
     DATA.productos = todo.productos;
     DATA.actividades = todo.actividades;
@@ -426,14 +445,8 @@ async function cargarDatos(){
     reconstruirInfoAdicional(todo.infoAdicional);
     PRIMERA_CARGA = false;
     document.getElementById('corteLabel').innerHTML = icon('calendar',{size:14}) + `Corte: ${CONFIG.corte}`;
-    const periodoSel = document.getElementById('periodoSel');
-    periodoSel.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.periodo === PERIODO));
-    periodoSel.style.display = ADMIN_MODE ? 'none' : '';
+    marcarPeriodo_();
     renderTabs(); renderView();
-    return true;
-  }catch(err){
-    if(!PRIMERA_CARGA){ toast('No se pudo actualizar: ' + err.message); return false; }
-    app.innerHTML = `<div class="empty">${icon('alertTriangle',{size:28,color:'var(--rojo)'})}<div style="margin-top:8px;">No se pudo cargar la información.</div><span class="muted" style="font-size:11px;">${esc(err.message)}</span><br><br><button class="btn primary" onclick="cargarDatos()">${icon('refresh',{size:14})}Reintentar</button></div>`;
   }
 }
 function sumaResumen(resumen, categoria){
@@ -1814,8 +1827,15 @@ document.getElementById('periodoSel').addEventListener('click', async (e) => {
   if(!b || b.dataset.periodo === PERIODO) return;
   const anterior = PERIODO;
   PERIODO = b.dataset.periodo;
+  marcarPeriodo_();
+  if(PERIODO === 'actual' && CACHE_ACTUAL){
+    Object.assign(CONFIG, CONFIG_ACTUAL);
+    pintarDatos_(...CACHE_ACTUAL);
+  } else if(PERIODO === 'actual'){
+    document.getElementById('app').innerHTML = '<div class="empty"><div class="loader-ring"></div>Cargando información en vivo…</div>';
+  }
   // Si la carga falla se vuelve al periodo anterior: si no, el botón quedaría "activo" sin datos y no dejaría reintentar.
-  if(!(await cargarDatos())){ PERIODO = anterior; return; }
+  if(!(await cargarDatos())){ PERIODO = anterior; marcarPeriodo_(); renderView(); return; }
   MES_SELECCIONADO = CONFIG.mesActual;
   renderView();
 });
